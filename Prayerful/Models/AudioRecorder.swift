@@ -284,23 +284,28 @@ extension AudioRecorder {
 	}
 }
 
-/// Errors pertaining to the ``AudioRecorder`` class
-enum AudioRecorderError: LocalizedError {
-	/// An audio session could not be successfully activated
-	case sessionActivationFailed(_ error: Error)
-	/// A recording could not be initialized
-	case recordingInitializationFailed(_ error: Error)
-	/// An audio session could not be deactivated
-	case sessionDeactivationFailed(_ error: Error)
+extension AudioRecorder {
 	
-	var errorDescription: String? {
-		switch self {
-		case .recordingInitializationFailed(let error):
-			return "Failed to initialize recording: \(error.localizedDescription)"
-		case .sessionActivationFailed(error: let error):
-			return "Failed to activate audio session: \(error.localizedDescription)"
-		case .sessionDeactivationFailed(error: let error):
-			return "Failed to deactivate audio session: \(error.localizedDescription)"
+	// MARK: - Errors
+	
+	/// Errors pertaining to the ``AudioRecorder`` class
+	enum AudioRecorderError: LocalizedError {
+		/// An audio session could not be successfully activated
+		case sessionActivationFailed(_ error: Error)
+		/// A recording could not be initialized
+		case recordingInitializationFailed(_ error: Error)
+		/// An audio session could not be deactivated
+		case sessionDeactivationFailed(_ error: Error)
+		
+		var errorDescription: String? {
+			switch self {
+			case .recordingInitializationFailed(let error):
+				return "Failed to initialize recording: \(error.localizedDescription)"
+			case .sessionActivationFailed(error: let error):
+				return "Failed to activate audio session: \(error.localizedDescription)"
+			case .sessionDeactivationFailed(error: let error):
+				return "Failed to deactivate audio session: \(error.localizedDescription)"
+			}
 		}
 	}
 }
