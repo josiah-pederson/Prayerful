@@ -7,6 +7,7 @@
 
 import SwiftUI
 import OSLog
+import AVFAudio
 
 /// View for recording a prayer
 struct RecordingView: View {
@@ -16,42 +17,56 @@ struct RecordingView: View {
 	/// Tracks iOS microphone permissions for this app
 	@State private var microphonePermissionDenied = false
 	
+	@Environment(\.scenePhase) var phase: ScenePhase
+	
 	var body: some View {
 		VStack {
-			switch audioRecorder.recordingStatus {
-			case .recording:
-				Text("Recording in progress")
-				Button("Stop Recording") {
-					if let recordingURL = audioRecorder.stopRecording() {
-						// Handle the saved recording URL (e.g., add to session)
-						print("Recording saved at: \(recordingURL)")
+			Text(audioRecorder.recordingStatus.description)
+			Group {
+				switch audioRecorder.recordingStatus {
+				case .recording:
+					Button {
+						if let recordingURL = audioRecorder.stopRecording() {
+							// Handle the saved recording URL (e.g., add to session)
+							Logger.shared.debug("Recording saved at: \(recordingURL)")
+						}
+					} label: {
+						Image(systemName: "square.circle.fill")
+							.resizable()
 					}
+				case .paused:
+					Button {
+						audioRecorder.startRecording()
+					} label: {
+						Image(systemName: "waveform.circle.fill")
+							.resizable()
+					}
+				case .stopped:
+					Button {
+						audioRecorder.startRecording()
+					} label: {
+						Image(systemName: "waveform.circle.fill")
+							.resizable()
+					}
+					Button("Logs") {
+						audioRecorder.cleanUpOldRecordings()
+					}
+				case .error:
+					Button {
+						audioRecorder.recordingStatus = .stopped
+					} label: {
+						Image(systemName: "exclamationmark.arrow.circlepath")
+							.resizable()
+					}
+				case .preparing:
+					ProgressView()
+				case .finalizing:
+					ProgressView()
 				}
-			case .paused:
-				Text("Recording is paused")
-				Button("Resume Recording") {
-					audioRecorder.startRecording()
-				}
-			case .stopped:
-				Text("No current recording")
-				Button("Start Recording") {
-					audioRecorder.startRecording()
-				}
-				Button("Clean up") {
-					audioRecorder.cleanUpOldRecordings()
-				}
-			case .error(let error):
-				Text("Recording failed: \(error.localizedDescription)")
-				Button("Try again") {
-					audioRecorder.recordingStatus = .stopped
-				}
-			case .preparing:
-				Text("Preparing to record")
-				ProgressView()
-			case .finalizing:
-				Text("Finalizing recording")
-				ProgressView()
 			}
+			.scaledToFit()
+			.frame(width: 50)
+			
 		}
 		.padding()
 		.animation(.easeIn, value: audioRecorder.recordingStatus)
@@ -67,6 +82,27 @@ struct RecordingView: View {
 		.onDisappear {
 			// This may need to be stopRecording
 			audioRecorder.pauseRecording()
+		}
+		.onChange(of: phase) { oldPhase, newPhase in
+			switch newPhase {
+			case .background:
+				Logger.shared.debug("Recording paused because app entered background")
+				audioRecorder.pauseRecording()
+			case .active:
+				do {
+					try audioRecorder.activateAudioSession()
+					Logger.shared.debug("Recording engine reactivated because app is now active")
+
+				} catch {
+					let recordingError = AudioRecorderError.sessionActivationFailed(error)
+					Logger.shared.error("\(recordingError.localizedDescription)")
+					DispatchQueue.main.async {
+						audioRecorder.recordingStatus = .error(recordingError)
+					}
+				}
+			default:
+				return
+			}
 		}
 		.alert(isPresented: $microphonePermissionDenied) {
 			// Show an alert where the user can go to settings to enable microphone access

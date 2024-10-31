@@ -10,7 +10,7 @@ import SwiftData
 
 /// A recording of a prayer as part of a ``PrayerThread``
 ///
-/// > Note: This is a SwiftData persistent storage model
+/// - Note: This is a SwiftData persistent storage model
 @Model
 class PrayerRecording {
 	var filePath: URL

@@ -12,7 +12,7 @@ import SwiftData
 ///
 /// Uses the ``PrayerRecording`` model for saving recordings
 ///
-/// >Note: This is a SwiftData persistent storage model
+/// - Note: This is a SwiftData persistent storage model
 @Model
 class PrayerThread {
 	var title: String

@@ -37,21 +37,8 @@ class AudioRecorder {
 	
 	/// Initializes a new `AudioRecorder` instance and sets up interruption handling.
 	init() {
-		// Adds observer for when the recording is interrupted by an iOS event such as a phone call.
-		NotificationCenter.default.addObserver(
-			self,
-			selector: #selector(handleInterruption),
-			name: AVAudioSession.interruptionNotification,
-			object: AVAudioSession.sharedInstance()
-		)
-		
-		// Adds observer for when the audio recording device (internal mic, headphones, etc.) changes during a recording.
-		NotificationCenter.default.addObserver(
-			self,
-			selector: #selector(handleRouteChange),
-			name: AVAudioSession.routeChangeNotification,
-			object: nil
-		)
+//		self.addInterruptionObserver() // Instead of using this, we use ScenePhase in RecordingView
+		self.addRouteChangeObserver()
 	}
 	
 	/// Removes the observer when the instance is deallocated.
@@ -90,7 +77,7 @@ extension AudioRecorder {
 	///
 	/// - Throws: `AudioRecorderError.sessionActivationFailed` if the audio session cannot be successfully activated.
 	/// - Important: This method should only be called when preparing to start or resume a recording.
-	private func activateAudioSession() throws {
+	func activateAudioSession() throws {
 		let session = AVAudioSession.sharedInstance()
 		
 		do {
@@ -266,6 +253,17 @@ extension AudioRecorder {
 		}
 	}
 	
+	/// Adds an observer for system interruptions
+	private func addInterruptionObserver() {
+		// Adds observer for when the recording is interrupted by an iOS event such as a phone call.
+		NotificationCenter.default.addObserver(
+			self,
+			selector: #selector(handleInterruption),
+			name: AVAudioSession.interruptionNotification,
+			object: AVAudioSession.sharedInstance()
+		)
+	}
+	
 	/// Pauses the recording when the microphone device (internal mic, headphones, etc) changes
 	/// - Parameter notification: The route change notification received
 	@objc private func handleRouteChange(notification: Notification) {
@@ -282,30 +280,39 @@ extension AudioRecorder {
 			break
 		}
 	}
+	
+	/// Adds an observer for when the audio recording route changes unexpectedly.
+	private func addRouteChangeObserver() {
+		// Adds observer for when the audio recording device (internal mic, headphones, etc.) changes during a recording.
+		NotificationCenter.default.addObserver(
+			self,
+			selector: #selector(handleRouteChange),
+			name: AVAudioSession.routeChangeNotification,
+			object: nil
+		)
+	}
 }
 
-extension AudioRecorder {
+
+// MARK: - AudioRecorder Errors
+
+/// Errors pertaining to the ``AudioRecorder`` class
+enum AudioRecorderError: LocalizedError {
+	/// An audio session could not be successfully activated
+	case sessionActivationFailed(_ error: Error)
+	/// A recording could not be initialized
+	case recordingInitializationFailed(_ error: Error)
+	/// An audio session could not be deactivated
+	case sessionDeactivationFailed(_ error: Error)
 	
-	// MARK: - Errors
-	
-	/// Errors pertaining to the ``AudioRecorder`` class
-	enum AudioRecorderError: LocalizedError {
-		/// An audio session could not be successfully activated
-		case sessionActivationFailed(_ error: Error)
-		/// A recording could not be initialized
-		case recordingInitializationFailed(_ error: Error)
-		/// An audio session could not be deactivated
-		case sessionDeactivationFailed(_ error: Error)
-		
-		var errorDescription: String? {
-			switch self {
-			case .recordingInitializationFailed(let error):
-				return "Failed to initialize recording: \(error.localizedDescription)"
-			case .sessionActivationFailed(error: let error):
-				return "Failed to activate audio session: \(error.localizedDescription)"
-			case .sessionDeactivationFailed(error: let error):
-				return "Failed to deactivate audio session: \(error.localizedDescription)"
-			}
+	var errorDescription: String? {
+		switch self {
+		case .recordingInitializationFailed(let error):
+			return "Failed to initialize recording: \(error.localizedDescription)"
+		case .sessionActivationFailed(error: let error):
+			return "Failed to activate audio session: \(error.localizedDescription)"
+		case .sessionDeactivationFailed(error: let error):
+			return "Failed to deactivate audio session: \(error.localizedDescription)"
 		}
 	}
 }

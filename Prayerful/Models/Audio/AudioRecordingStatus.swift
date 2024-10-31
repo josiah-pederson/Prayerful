@@ -1,5 +1,5 @@
 //
-//  RecordingStatus.swift
+//  AudioRecordingStatus.swift
 //  Prayerful
 //
 //  Created by Josiah Pederson on 10/29/24.
@@ -15,6 +15,19 @@ enum AudioRecordingStatus {
 	case preparing
 	case finalizing
 	case error(Error)
+}
+
+extension AudioRecordingStatus: CustomStringConvertible {
+	var description: String {
+		switch self {
+		case .stopped: return "Stopped"
+		case .error(let error): return "Error: \(error.localizedDescription)"
+		case .recording: return "Recording"
+		case .paused: return "Paused"
+		case .preparing: return "Preparing"
+		case .finalizing: return "Finalizing"
+		}
+	}
 }
 
 extension AudioRecordingStatus: Equatable {
