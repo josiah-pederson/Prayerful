@@ -118,7 +118,7 @@ extension AudioRecorder {
 			let files = try fileManager.contentsOfDirectory(at: documentsDirectory, includingPropertiesForKeys: nil)
 			for file in files {
 				// Not sure what we want to do but for now just log names of recordings
-				Logger.shared.debug("Found recording: \(file.lastPathComponent)")
+				Logger.shared.info("Found recording: \(file.lastPathComponent)")
 			}
 		} catch {
 			Logger.shared.error("Failed to clean up old recordings: \(error.localizedDescription)")
@@ -234,7 +234,7 @@ extension AudioRecorder {
 			  let type = userInfo[AVAudioSessionInterruptionTypeKey] as? UInt,
 			  let interruptionType = AVAudioSession.InterruptionType(rawValue: type) else { return }
 		
-		Logger.shared.debug("Audio session interruption: \(interruptionType.rawValue)")
+		Logger.shared.info("Audio session interruption: \(interruptionType.rawValue)")
 
 		if interruptionType == .began {
 			// Pause the recording when an interruption begins.
@@ -274,7 +274,7 @@ extension AudioRecorder {
 		switch routeChangeReason {
 		case .oldDeviceUnavailable:
 			// Pause the recording if previous recording device is no longer available.
-			Logger.shared.debug("Audio route changed, old device unavailable. Pausing recording.")
+			Logger.shared.info("Audio route changed, old device unavailable. Pausing recording.")
 			self.pauseRecording()
 		default:
 			break

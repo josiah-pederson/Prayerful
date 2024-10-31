@@ -28,7 +28,7 @@ struct RecordingView: View {
 					Button {
 						if let recordingURL = audioRecorder.stopRecording() {
 							// Handle the saved recording URL (e.g., add to session)
-							Logger.shared.debug("Recording saved at: \(recordingURL)")
+							Logger.shared.info("Recording saved at: \(recordingURL)")
 						}
 					} label: {
 						Image(systemName: "square.circle.fill")
@@ -86,12 +86,12 @@ struct RecordingView: View {
 		.onChange(of: phase) { oldPhase, newPhase in
 			switch newPhase {
 			case .background:
-				Logger.shared.debug("Recording paused because app entered background")
+				Logger.shared.info("Recording paused because app entered background")
 				audioRecorder.pauseRecording()
 			case .active:
 				do {
 					try audioRecorder.activateAudioSession()
-					Logger.shared.debug("Recording engine reactivated because app is now active")
+					Logger.shared.info("Recording engine reactivated because app is now active")
 
 				} catch {
 					let recordingError = AudioRecorderError.sessionActivationFailed(error)
