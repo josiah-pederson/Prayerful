@@ -9,7 +9,7 @@ import SwiftUI
 import SwiftData
 
 struct ThreadListView: View {
-	@Query private var threads: [PrayerThread]
+	@Query var threads: [PrayerThread]
     var body: some View {
 		List(threads) { thread in
 			NavigationLink(value: thread) {
@@ -17,7 +17,7 @@ struct ThreadListView: View {
 					Image(systemName: "play.circle.fill")
 					VStack(alignment: .leading) {
 						Text(thread.title)
-						Text(thread.duration.description)
+						Text(thread.durationDescription)
 							.font(.caption)
 					}
 					Spacer()
@@ -25,6 +25,7 @@ struct ThreadListView: View {
 				
 			}
 		}
+		.navigationTitle("Prayer Threads")
     }
 }
 

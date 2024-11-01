@@ -6,11 +6,39 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct ContentView: View {
+	@Environment(\.modelContext) var modelContext
+	
+	@State private var navigationPath = NavigationPath()
+	
     var body: some View {
-		RecordingView(prayerThread: .init())
+		NavigationStack(path: $navigationPath) {
+			ThreadListView()
+				.overlay(alignment: .bottom) {
+					Button {
+						newPrayerThread()
+					} label: {
+						Image(systemName: "waveform.circle.fill")
+							.resizable()
+					}
+					.scaledToFit()
+					.padding()
+					.frame(maxWidth: .infinity, maxHeight: 100)
+					.background()
+				}
+				.navigationDestination(for: PrayerThread.self) { prayerThread in
+					RecordingView(prayerThread)
+				}
+		}
     }
+	
+	func newPrayerThread() {
+		let thread = PrayerThread()
+		modelContext.insert(thread)
+		self.navigationPath.append(thread)
+	}
 }
 
 #Preview {

@@ -23,7 +23,7 @@ struct RecordingView: View {
 	
 	@Bindable private var prayerThread: PrayerThread
 	
-	init(prayerThread: PrayerThread) {
+	init(_ prayerThread: PrayerThread) {
 		self.prayerThread = prayerThread
 	}
 	
@@ -32,7 +32,7 @@ struct RecordingView: View {
 	var body: some View {
 		VStack {
 			if prayerThread.count > 0 {
-				TextField("Prayer thread title", text: $prayerThread.title)
+				TextField("Name this prayer thread", text: $prayerThread.title)
 					.focused($titleFocus)
 					.multilineTextAlignment(.center)
 					.font(.title)
@@ -179,7 +179,7 @@ struct Previewer {
 	do {
 		let previewer = try Previewer()
 		
-		return RecordingView(prayerThread: previewer.thread)
+		return RecordingView(previewer.thread)
 			.modelContainer(previewer.container)
 	} catch {
 		return Text("Failed to make container")
