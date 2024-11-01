@@ -8,9 +8,11 @@
 import SwiftUI
 import OSLog
 import AVFAudio
+import SwiftData
 
 /// View for recording a prayer
 struct RecordingView: View {
+	
 	/// The engine for recording audio
 	@State private var audioRecorder = AudioRecorder()
 	
@@ -19,16 +21,52 @@ struct RecordingView: View {
 	
 	@Environment(\.scenePhase) var phase: ScenePhase
 	
+	@Bindable private var prayerThread: PrayerThread
+	
+	init(prayerThread: PrayerThread) {
+		self.prayerThread = prayerThread
+	}
+	
+	@FocusState private var titleFocus: Bool
+	
 	var body: some View {
 		VStack {
+			if prayerThread.count > 0 {
+				TextField("Prayer thread title", text: $prayerThread.title)
+					.focused($titleFocus)
+					.multilineTextAlignment(.center)
+					.font(.title)
+			}
+			
+			// This probably won't be used here, it is just a concept
+			if prayerThread.count > 0 {
+				GeometryReader { geo in
+					HStack {
+						ForEach(prayerThread.recordings) { prayer in
+							let durationPercentage = prayer.duration / prayerThread.duration
+							let width = durationPercentage * geo.size.width
+							RoundedRectangle(cornerRadius: 3)
+								.padding(3)
+								.frame(maxWidth: width)
+						}
+					}
+				}
+				.frame(maxWidth: .infinity, maxHeight: 30)
+				
+			}
 			Text(audioRecorder.recordingStatus.description)
 			Group {
 				switch audioRecorder.recordingStatus {
 				case .recording:
 					Button {
-						if let recordingURL = audioRecorder.stopRecording() {
+						if let (recordingURL, duration) = audioRecorder.stopRecording() {
 							// Handle the saved recording URL (e.g., add to session)
 							Logger.shared.info("Recording saved at: \(recordingURL)")
+							let prayer = PrayerRecording(filePath: recordingURL, duration: duration)
+							prayerThread.recordings.append(prayer)
+							if !prayerThread.hasTitle {
+								self.titleFocus = true
+							}
 						}
 					} label: {
 						Image(systemName: "square.circle.fill")
@@ -120,6 +158,31 @@ struct RecordingView: View {
 	}
 }
 
+@MainActor
+struct Previewer {
+	let container: ModelContainer
+	let thread: PrayerThread
+	
+	init() throws {
+		let config = ModelConfiguration(isStoredInMemoryOnly: true)
+		container = try ModelContainer(for: PrayerThread.self, configurations: config)
+		
+		thread = .init()
+		
+		container.mainContext.insert(thread)
+	}
+}
+
+
+
 #Preview {
-	RecordingView()
+	do {
+		let previewer = try Previewer()
+		
+		return RecordingView(prayerThread: previewer.thread)
+			.modelContainer(previewer.container)
+	} catch {
+		return Text("Failed to make container")
+	}
+	
 }

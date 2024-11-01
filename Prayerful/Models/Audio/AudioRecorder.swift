@@ -108,20 +108,32 @@ extension AudioRecorder {
 	
 	// MARK: - Cleanup methods
 	
-	/// Performs a task on each existing recording
+	/// Deletes all audio recordings in the app's documents directory.
 	///
-	/// >Note: This does nothing right now and I dont think this will live here long term.
+	/// This method iterates through all files in the app's documents directory and removes those that match the audio file naming convention used by the `AudioRecorder` class.
+	///
+	/// - Warning: This operation cannot be undone, so use it carefully.
 	func cleanUpOldRecordings() {
 		let fileManager = FileManager.default
 		let documentsDirectory = getDocumentsDirectory()
+		
 		do {
+			// Get all files in the documents directory
 			let files = try fileManager.contentsOfDirectory(at: documentsDirectory, includingPropertiesForKeys: nil)
+			
 			for file in files {
-				// Not sure what we want to do but for now just log names of recordings
-				Logger.shared.info("Found recording: \(file.lastPathComponent)")
+				// Only delete files that match the "Recording_" prefix and ".m4a" extension.
+				if file.lastPathComponent.hasPrefix("Recording_") && file.pathExtension == "m4a" {
+					do {
+						try fileManager.removeItem(at: file)
+						Logger.shared.info("Deleted recording: \(file.lastPathComponent)")
+					} catch {
+						Logger.shared.error("Failed to delete recording \(file.lastPathComponent): \(error.localizedDescription)")
+					}
+				}
 			}
 		} catch {
-			Logger.shared.error("Failed to clean up old recordings: \(error.localizedDescription)")
+			Logger.shared.error("Failed to access recordings directory: \(error.localizedDescription)")
 		}
 	}
 }
@@ -185,7 +197,7 @@ extension AudioRecorder {
 	/// Stops the current recording and returns the recorded file URL.
 	///
 	/// - Returns: The file URL of the recorded audio, if available.
-	func stopRecording() -> URL? {
+	func stopRecording() -> (URL, TimeInterval)? {
 		guard recordingStatus == .recording || recordingStatus == .paused else {
 			Logger.shared.error("Cannot stop a recording that is not active.")
 			return nil
@@ -200,9 +212,17 @@ extension AudioRecorder {
 			self.recordingStatus = .stopped
 		}
 		self.deactivateAudioSession()
-		let recordedURL = audioRecorder?.url
+		guard let recordedURL = audioRecorder?.url else {
+			Logger.shared.error("Audio recorder cannot be null")
+			return nil
+		}
+		
 		self.audioRecorder = nil
-		return recordedURL
+		
+		let audioPlayer = try? AVAudioPlayer(contentsOf: recordedURL)
+
+		let duration = audioPlayer?.duration ?? 0.0
+		return (recordedURL, duration)
 	}
 	
 	/// Pauses the current recording.

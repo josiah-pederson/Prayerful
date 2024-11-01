@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 @main
 struct PrayerfulApp: App {
@@ -13,5 +14,7 @@ struct PrayerfulApp: App {
         WindowGroup {
             ContentView()
         }
+		// Initialize persistent storage
+		.modelContainer(for: PrayerThread.self)
     }
 }

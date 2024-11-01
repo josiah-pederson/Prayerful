@@ -19,10 +19,26 @@ class PrayerThread {
 	var creationDate: Date
 	@Relationship(deleteRule: .cascade, inverse: \PrayerRecording.prayerThread)
 	var recordings: [PrayerRecording]
+	
+	/// Duration of all Thread's recordings combined
+	var duration: TimeInterval {
+		recordings.reduce(0) { $0 + $1.duration }
+	}
+	
+	/// Number of recordings in this prayer thread
+	var count: Int {
+		recordings.count
+	}
+	
+	var hasTitle: Bool {
+		!self.title.isEmpty
+	}
 
-	init(title: String, creationDate: Date = Date()) {
+	init(title: String = "", creationDate: Date = Date()) {
 		self.title = title
 		self.creationDate = creationDate
 		self.recordings = []
 	}
 }
+
+extension PrayerThread: Hashable { }

@@ -14,13 +14,15 @@ import SwiftData
 @Model
 class PrayerRecording {
 	var filePath: URL
-	var duration: Double
+	var duration: TimeInterval
 	var timestamp: Date
 	var prayerThread: PrayerThread?
 
-	init(filePath: URL, duration: Double, timestamp: Date = Date()) {
+	init(filePath: URL, duration: TimeInterval, timestamp: Date = Date()) {
 		self.filePath = filePath
 		self.duration = duration
 		self.timestamp = timestamp
 	}
 }
+
+extension PrayerRecording: Hashable { }
