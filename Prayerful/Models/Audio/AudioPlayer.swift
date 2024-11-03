@@ -18,7 +18,7 @@ import AVFoundation
 /// The `AudioPlaybackEngine` uses `AVAudioPlayer` for audio playback, and it observes the playback status to
 /// automatically transition to the next recording in the sequence when one finishes
 @Observable
-class AudioPlayer: NSObject {
+class AudioPlayer {
 	
 	/// The current audio player responsible for playback.
 	private var player: AVAudioPlayer?
@@ -38,8 +38,7 @@ class AudioPlayer: NSObject {
 	var currentRecording: PrayerRecording?
 	
 	/// Initializes a new `AudioPlaybackEngine` and sets up a notification to detect when playback finishes.
-	override init() {
-		super.init()
+	init() {
 		// Set up notification for when playback finishes
 		NotificationCenter.default.addObserver(self, selector: #selector(audioDidFinishPlaying(_:)), name: .AVPlayerItemDidPlayToEndTime, object: nil)
 	}
@@ -120,8 +119,9 @@ class AudioPlayer: NSObject {
 		
 		do {
 			// Initialize the player with the recording URL and start playback.
+			try AVAudioSession.sharedInstance().setCategory(.playback)
+
 			player = try AVAudioPlayer(contentsOf: recordingURL)
-			player?.delegate = self
 			player?.play()
 			isPlaying = true
 		} catch let error as NSError {
@@ -143,7 +143,7 @@ class AudioPlayer: NSObject {
 	}
 }
 
-extension AudioPlayer: AVAudioPlayerDelegate {
+extension AudioPlayer {
 	
 	/// Called when `AVAudioPlayer` finishes playback of an audio recording.
 	///

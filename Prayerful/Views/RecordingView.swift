@@ -16,9 +16,6 @@ struct RecordingView: View {
 	/// The engine for recording audio
 	@State private var audioRecorder = AudioRecorder()
 	
-	/// The engine for playing audio
-	@State private var audioPlayer = AudioPlayer()
-	
 	/// Tracks iOS microphone permissions for this app
 	@State private var microphonePermissionDenied = false
 	
@@ -42,40 +39,7 @@ struct RecordingView: View {
 					.multilineTextAlignment(.center)
 					.font(.title)
 			}
-			
-			// This probably won't be used here, it is just a concept
-			if prayerThread.count > 0 {
-				GeometryReader { geo in
-					HStack {
-						ForEach(prayerThread.recordings) { prayer in
-							let durationPercentage = prayer.duration / prayerThread.duration
-							let width = durationPercentage * geo.size.width
-							Button {
-								self.audioPlayer.play(from: prayer)
-							} label: {
-								RoundedRectangle(cornerRadius: 3)
-									.padding(3)
-									.frame(maxWidth: width)
-							}
-						}
-					}
-				}
-				.frame(maxWidth: .infinity, maxHeight: 30)
-				
-				switch audioPlayer.isPlaying {
-				case true:
-					Button("Stop playback") {
-						audioPlayer.stop()
-					}
-					Button("Pause playback") {
-						audioPlayer.pause()
-					}
-				case false:
-					Button("Play from start") {
-						audioPlayer.play()
-					}
-				}
-			}
+			ThreadPlaybackView(prayerThread)
 			Text(audioRecorder.recordingStatus.description)
 			Group {
 				switch audioRecorder.recordingStatus {
@@ -145,12 +109,6 @@ struct RecordingView: View {
 					self.microphonePermissionDenied = true
 				}
 			}
-			// Set the player up with all recordings in the thread
-			self.audioPlayer.setRecordings(prayerThread.recordings)
-		}
-		.onChange(of: self.prayerThread.recordings) { oldVal, newVal in
-			// Set player up with all updated recordings in the thread
-			self.audioPlayer.setRecordings(newVal)
 		}
 		.onDisappear {
 			// This may need to be stopRecording
