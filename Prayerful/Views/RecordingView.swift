@@ -16,6 +16,9 @@ struct RecordingView: View {
 	/// The engine for recording audio
 	@State private var audioRecorder = AudioRecorder()
 	
+	/// The engine for playing audio
+	@State private var audioPlayer = AudioPlayer()
+	
 	/// Tracks iOS microphone permissions for this app
 	@State private var microphonePermissionDenied = false
 	
@@ -26,8 +29,10 @@ struct RecordingView: View {
 	init(_ prayerThread: PrayerThread) {
 		self.prayerThread = prayerThread
 	}
-	
+		
 	@FocusState private var titleFocus: Bool
+	
+	@Environment(\.modelContext) var modelContext
 	
 	var body: some View {
 		VStack {
@@ -45,14 +50,31 @@ struct RecordingView: View {
 						ForEach(prayerThread.recordings) { prayer in
 							let durationPercentage = prayer.duration / prayerThread.duration
 							let width = durationPercentage * geo.size.width
-							RoundedRectangle(cornerRadius: 3)
-								.padding(3)
-								.frame(maxWidth: width)
+							Button {
+								self.audioPlayer.play(from: prayer)
+							} label: {
+								RoundedRectangle(cornerRadius: 3)
+									.padding(3)
+									.frame(maxWidth: width)
+							}
 						}
 					}
 				}
 				.frame(maxWidth: .infinity, maxHeight: 30)
 				
+				switch audioPlayer.isPlaying {
+				case true:
+					Button("Stop playback") {
+						audioPlayer.stop()
+					}
+					Button("Pause playback") {
+						audioPlayer.pause()
+					}
+				case false:
+					Button("Play from start") {
+						audioPlayer.play()
+					}
+				}
 			}
 			Text(audioRecorder.recordingStatus.description)
 			Group {
@@ -64,6 +86,13 @@ struct RecordingView: View {
 							Logger.shared.info("Recording saved at: \(recordingURL)")
 							let prayer = PrayerRecording(filePath: recordingURL, duration: duration)
 							prayerThread.recordings.append(prayer)
+							
+							do {
+								try self.modelContext.save()
+							} catch {
+								Logger.shared.error("Error saving prayer recording: \(error)")
+							}
+							
 							if !prayerThread.hasTitle {
 								self.titleFocus = true
 							}
@@ -116,6 +145,12 @@ struct RecordingView: View {
 					self.microphonePermissionDenied = true
 				}
 			}
+			// Set the player up with all recordings in the thread
+			self.audioPlayer.setRecordings(prayerThread.recordings)
+		}
+		.onChange(of: self.prayerThread.recordings) { oldVal, newVal in
+			// Set player up with all updated recordings in the thread
+			self.audioPlayer.setRecordings(newVal)
 		}
 		.onDisappear {
 			// This may need to be stopRecording

@@ -50,13 +50,6 @@ class AudioRecorder {
 extension AudioRecorder {
 	
 	// MARK: - Private Methods
-	
-	/// Acquires the system directory to save recordings.
-	///
-	/// - Returns: A URL pointing to the app's documents directory.
-	private func getDocumentsDirectory() -> URL {
-		FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-	}
 
 	/// Creates a file URL for a new recording.
 	///
@@ -66,8 +59,10 @@ extension AudioRecorder {
 		let dateFormatter = DateFormatter()
 		dateFormatter.dateFormat = "yyyyMMdd_HHmmss"
 		let dateString = dateFormatter.string(from: Date())
-		let fileName = "Recording_\(dateString).m4a"
-		return self.getDocumentsDirectory().appendingPathComponent(fileName)
+		let fileName = "Recording_\(dateString)"
+		let directory = FileFinder.documentsDirectory
+		let recordingURL = URL(fileURLWithPath: fileName, relativeTo: directory).appendingPathExtension("m4a")
+		return recordingURL
 	}
 	
 	/// Activates an audio session for a recording.
@@ -115,7 +110,7 @@ extension AudioRecorder {
 	/// - Warning: This operation cannot be undone, so use it carefully.
 	func cleanUpOldRecordings() {
 		let fileManager = FileManager.default
-		let documentsDirectory = getDocumentsDirectory()
+		let documentsDirectory = FileFinder.documentsDirectory
 		
 		do {
 			// Get all files in the documents directory
@@ -198,6 +193,11 @@ extension AudioRecorder {
 	///
 	/// - Returns: The file URL of the recorded audio, if available.
 	func stopRecording() -> (URL, TimeInterval)? {
+		
+		defer {
+			self.audioRecorder = nil
+		}
+		
 		guard recordingStatus == .recording || recordingStatus == .paused else {
 			Logger.shared.error("Cannot stop a recording that is not active.")
 			return nil
@@ -212,14 +212,23 @@ extension AudioRecorder {
 			self.recordingStatus = .stopped
 		}
 		self.deactivateAudioSession()
+		
+		// Retrieve the recorded file URL.
 		guard let recordedURL = audioRecorder?.url else {
-			Logger.shared.error("Audio recorder cannot be null")
+			Logger.shared.error("Audio recorder returned a null URL.")
 			return nil
 		}
 		
-		self.audioRecorder = nil
-		
+		// Ensure the file was saved.
+		guard FileManager.default.fileExists(atPath: recordedURL.path) else {
+			Logger.shared.error("Recording file was not saved at expected path: \(recordedURL.path)")
+			return nil
+		}
+				
 		let audioPlayer = try? AVAudioPlayer(contentsOf: recordedURL)
+		
+		let relativePath = recordedURL.relativePath
+		Logger.shared.info("Related path: \(relativePath)")
 
 		let duration = audioPlayer?.duration ?? 0.0
 		return (recordedURL, duration)

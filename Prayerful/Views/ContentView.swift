@@ -16,6 +16,15 @@ struct ContentView: View {
     var body: some View {
 		NavigationStack(path: $navigationPath) {
 			ThreadListView()
+				.overlay(alignment: .top) {
+					Button("Erase all") {
+						do {
+							try modelContext.delete(model: PrayerThread.self)
+						} catch {
+							print("Failed to clear all Country and City data.")
+						}
+					}
+				}
 				.overlay(alignment: .bottom) {
 					Button {
 						newPrayerThread()
