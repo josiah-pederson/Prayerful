@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import OSLog
 
 struct ContentView: View {
 	@Environment(\.modelContext) var modelContext
@@ -16,15 +17,6 @@ struct ContentView: View {
     var body: some View {
 		NavigationStack(path: $navigationPath) {
 			ThreadListView()
-				.overlay(alignment: .top) {
-					Button("Erase all") {
-						do {
-							try modelContext.delete(model: PrayerThread.self)
-						} catch {
-							print("Failed to clear all Country and City data.")
-						}
-					}
-				}
 				.overlay(alignment: .bottom) {
 					Button {
 						newPrayerThread()
@@ -39,6 +31,22 @@ struct ContentView: View {
 				}
 				.navigationDestination(for: PrayerThread.self) { prayerThread in
 					RecordingView(prayerThread)
+				}
+				.toolbar {
+					ToolbarItem(placement: .topBarTrailing) {
+						Menu {
+							Button("Erase all prayer threads", role: .destructive) {
+								do {
+									try modelContext.delete(model: PrayerThread.self)
+									Logger.shared.info("Erased prayer threads")
+								} catch {
+									Logger.shared.error("Failed to erase prayer threads")
+								}
+							}
+						} label: {
+							Image(systemName: "ellipsis.circle")
+						}
+					}
 				}
 		}
     }

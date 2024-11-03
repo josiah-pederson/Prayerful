@@ -10,6 +10,9 @@ import SwiftData
 
 struct ThreadListView: View {
 	@Query var threads: [PrayerThread]
+	
+	@Environment(\.modelContext) var modelContext
+	
     var body: some View {
 		List(threads) { thread in
 			NavigationLink(value: thread) {
@@ -24,9 +27,21 @@ struct ThreadListView: View {
 				}
 				
 			}
+			.swipeActions {
+				Button("Delete", systemImage: "trash", role: .destructive) {
+					self.delete(thread)
+				}
+			}
 		}
 		.navigationTitle("Prayer Threads")
     }
+	
+	// Delete thread at offsets method
+	private func delete(_ thread: PrayerThread) {
+		self.modelContext.delete(thread)
+	}
+	
+	
 }
 
 #Preview {
