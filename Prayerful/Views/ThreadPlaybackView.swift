@@ -53,6 +53,9 @@ struct ThreadPlaybackView: View {
 			// Set the player up with all recordings in the thread
 			self.audioPlayer.setRecordings(prayerThread.recordings)
 		}
+		.onDisappear {
+			self.audioPlayer.stop()
+		}
 		.onChange(of: self.prayerThread.recordings) { oldVal, newVal in
 			// Set player up with all updated recordings in the thread
 			self.audioPlayer.setRecordings(newVal)

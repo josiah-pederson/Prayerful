@@ -39,7 +39,9 @@ struct RecordingView: View {
 					.multilineTextAlignment(.center)
 					.font(.title)
 			}
-			ThreadPlaybackView(prayerThread)
+			if audioRecorder.recordingStatus == .stopped {
+				ThreadPlaybackView(prayerThread)
+			}
 			Text(audioRecorder.recordingStatus.description)
 			Group {
 				switch audioRecorder.recordingStatus {
