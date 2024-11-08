@@ -9,13 +9,15 @@ import SwiftUI
 import SwiftData
 
 struct ThreadListView: View {
-	@Query var threads: [PrayerThread]
+	@Query private var threads: [PrayerThread]
 	
-	@Environment(\.modelContext) var modelContext
+	@Environment(\.modelContext) private var modelContext
 	
     var body: some View {
-		List(threads) { thread in
-			NavigationLink(value: thread) {
+		List(threads.sorted(by: isMoreRecent)) { thread in
+			NavigationLink {
+				RecordingView(thread)
+			} label: {
 				HStack {
 					Image(systemName: "play.circle.fill")
 					VStack(alignment: .leading) {
@@ -25,7 +27,6 @@ struct ThreadListView: View {
 					}
 					Spacer()
 				}
-				
 			}
 			.swipeActions {
 				Button("Delete", systemImage: "trash", role: .destructive) {
@@ -41,7 +42,14 @@ struct ThreadListView: View {
 		self.modelContext.delete(thread)
 	}
 	
-	
+	/// Compares the edited date of two ``PrayerThread`` instances
+	/// - Parameters:
+	///   - lhs: The left hand side prayer thread
+	///   - rhs: The right hand side prayer thread
+	/// - Returns: Whether the left prayer thread is more recent than the right
+	private func isMoreRecent(lhs: PrayerThread, rhs: PrayerThread) -> Bool {
+		lhs.editedDate > rhs.editedDate
+	}
 }
 
 #Preview {

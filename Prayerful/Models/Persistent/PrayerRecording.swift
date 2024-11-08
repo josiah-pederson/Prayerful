@@ -12,7 +12,7 @@ import SwiftData
 ///
 /// - Note: This is a SwiftData persistent storage model
 @Model
-class PrayerRecording {
+final class PrayerRecording {
 	var filePath: String
 	var duration: TimeInterval
 	var timestamp: Date

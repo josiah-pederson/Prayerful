@@ -19,17 +19,19 @@ struct RecordingView: View {
 	/// Tracks iOS microphone permissions for this app
 	@State private var microphonePermissionDenied = false
 	
-	@Environment(\.scenePhase) var phase: ScenePhase
+	@Environment(\.scenePhase) private var phase: ScenePhase
 	
 	@Bindable private var prayerThread: PrayerThread
 	
 	init(_ prayerThread: PrayerThread) {
 		self.prayerThread = prayerThread
 	}
-		
+	
 	@FocusState private var titleFocus: Bool
 	
-	@Environment(\.modelContext) var modelContext
+	@Environment(\.modelContext) private var modelContext
+	
+	@Environment(\.dismiss) private var dismiss
 	
 	var body: some View {
 		VStack {
@@ -52,12 +54,6 @@ struct RecordingView: View {
 							Logger.shared.info("Recording saved at: \(recordingURL)")
 							let prayer = PrayerRecording(filePath: recordingURL, duration: duration)
 							prayerThread.recordings.append(prayer)
-							
-							do {
-								try self.modelContext.save()
-							} catch {
-								Logger.shared.error("Error saving prayer recording: \(error)")
-							}
 							
 							if !prayerThread.hasTitle {
 								self.titleFocus = true
@@ -125,7 +121,7 @@ struct RecordingView: View {
 				do {
 					try audioRecorder.activateAudioSession()
 					Logger.shared.info("Recording engine reactivated because app is now active")
-
+					
 				} catch {
 					let recordingError = AudioRecorderError.sessionActivationFailed(error)
 					Logger.shared.error("\(recordingError.localizedDescription)")
@@ -150,25 +146,33 @@ struct RecordingView: View {
 				secondaryButton: .cancel()
 			)
 		}
+		.toolbar {
+			ToolbarItem(placement: .topBarTrailing) {
+				if self.prayerThread.isEmpty {
+					Button("Delete", systemImage: "trash", role: .destructive) {
+						self.dismiss()
+					}
+				} else {
+					Button("Save", systemImage: "checkmark") {
+						self.save()
+						self.dismiss()
+					}
+				}
+				
+			}
+		}
 	}
 }
 
-@MainActor
-struct Previewer {
-	let container: ModelContainer
-	let thread: PrayerThread
+extension RecordingView {
 	
-	init() throws {
-		let config = ModelConfiguration(isStoredInMemoryOnly: true)
-		container = try ModelContainer(for: PrayerThread.self, configurations: config)
-		
-		thread = .init()
-		
-		container.mainContext.insert(thread)
+	// MARK: Methods
+	
+	/// Saves the prayer thread to the model context
+	private func save() {
+		self.modelContext.insert(self.prayerThread)
 	}
 }
-
-
 
 #Preview {
 	do {

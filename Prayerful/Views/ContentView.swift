@@ -18,8 +18,8 @@ struct ContentView: View {
 		NavigationStack(path: $navigationPath) {
 			ThreadListView()
 				.overlay(alignment: .bottom) {
-					Button {
-						newPrayerThread()
+					NavigationLink {
+						RecordingView(.init())
 					} label: {
 						Image(systemName: "waveform.circle.fill")
 							.resizable()
@@ -28,9 +28,6 @@ struct ContentView: View {
 					.padding()
 					.frame(maxWidth: .infinity, maxHeight: 100)
 					.background()
-				}
-				.navigationDestination(for: PrayerThread.self) { prayerThread in
-					RecordingView(prayerThread)
 				}
 				.toolbar {
 					ToolbarItem(placement: .topBarTrailing) {
@@ -53,7 +50,6 @@ struct ContentView: View {
 	
 	func newPrayerThread() {
 		let thread = PrayerThread()
-		modelContext.insert(thread)
 		self.navigationPath.append(thread)
 	}
 }

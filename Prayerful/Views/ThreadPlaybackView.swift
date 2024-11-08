@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ThreadPlaybackView: View {
-	var prayerThread: PrayerThread
+	private var prayerThread: PrayerThread
 	
 	@State private var audioPlayer = AudioPlayer()
 	
@@ -20,7 +20,7 @@ struct ThreadPlaybackView: View {
 		VStack {
 			GeometryReader { geo in
 				HStack {
-					ForEach(prayerThread.recordings) { prayer in
+					ForEach(prayerThread.chronologicalRecordings) { prayer in
 						let durationPercentage = prayer.duration / prayerThread.duration
 						let width = durationPercentage * geo.size.width
 						Button {

@@ -14,7 +14,7 @@ import SwiftData
 ///
 /// - Note: This is a SwiftData persistent storage model
 @Model
-class PrayerThread {
+final class PrayerThread {
 	var title: String
 	var creationDate: Date
 	@Relationship(deleteRule: .cascade, inverse: \PrayerRecording.prayerThread)
@@ -63,5 +63,21 @@ extension PrayerThread {
 		} else {
 			return "\(seconds) second\(seconds != 1 ? "s" : "")"
 		}
+	}
+	
+	/// The date this prayer thread was updated
+	var editedDate: Date {
+		return self.recordings.last?.timestamp ?? self.creationDate
+	}
+	
+	// Sorts recordings from oldest to newest based on timestamp
+	var chronologicalRecordings: [PrayerRecording] {
+		recordings.sorted(by: { $0.timestamp < $1.timestamp })
+	}
+	
+	/// The PrayerThread has not been edited yet
+	/// - Returns: Whether the prayer thread is empty or not
+	var isEmpty: Bool {
+		!self.hasTitle && self.count == 0
 	}
 }
