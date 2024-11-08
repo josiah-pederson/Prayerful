@@ -12,6 +12,8 @@ struct ThreadPlaybackView: View {
 	
 	@State private var audioPlayer = AudioPlayer()
 	
+	@State private var currentTime: TimeInterval = .zero
+	
 	init(_ prayerThread: PrayerThread) {
 		self.prayerThread = prayerThread
 	}
@@ -64,6 +66,9 @@ struct ThreadPlaybackView: View {
 		.onChange(of: self.prayerThread.recordings) { oldVal, newVal in
 			// Set player up with all updated recordings in the thread
 			self.audioPlayer.setRecordings(newVal)
+		}
+		.onReceive(Timer.publish(every: 0.1, on: .main, in: .common).autoconnect()) { _ in
+			self.currentTime = audioPlayer.currentTime
 		}
 	}
 	

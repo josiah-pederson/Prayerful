@@ -36,8 +36,18 @@ class AudioPlayer: NSObject {
 	
 	// Published
 	/// The current recording being played.
-	var currentRecording: PrayerRecording?
+	var currentRecording: PrayerRecording? {
+		didSet {
+			self.playbackPosition = .zero
+		}
+	}
 	
+	var pausedPosition: TimeInterval = .zero
+	
+	var currentTime: TimeInterval {
+		self.player?.currentTime ?? .zero
+	}
+		
 	/// Initializes a new `AudioPlaybackEngine` and sets up a notification to detect when playback finishes.
 	override init() {
 		super.init()
@@ -79,6 +89,7 @@ class AudioPlayer: NSObject {
 	/// This method pauses the audio player if playback is active, keeping the current position.
 	func pause() {
 		player?.pause()
+		self.pausedPosition = player?.currentTime ?? 0
 		isPlaying = false
 	}
 	
@@ -90,11 +101,6 @@ class AudioPlayer: NSObject {
 		isPlaying = false
 		currentIndex = 0
 		currentRecording = recordings.first
-	}
-	
-	/// Gets the current playback time
-	var playbackPosition: TimeInterval {
-		player?.currentTime ?? 0
 	}
 	
 	// MARK: - Private Methods
@@ -109,9 +115,14 @@ class AudioPlayer: NSObject {
 			return
 		}
 		
-		// Set the current recording and check the file URL.
-		currentRecording = recordings[currentIndex]
-		guard let recordingURL = currentRecording?.url else {
+		// Only update current recording if it has changed
+		let currentRecording = recordings[currentIndex]
+		if self.currentRecording != currentRecording {
+			self.currentRecording = currentRecording
+		}
+		
+		// Ensure the URL is valid
+		guard let recordingURL = self.currentRecording?.url else {
 			let error = AudioPlayerError.noFileUrl
 			Logger.shared.error("\(error)")
 			return
@@ -137,6 +148,7 @@ class AudioPlayer: NSObject {
 			// Initialize the player with the recording URL and start playback.
 			player = try AVAudioPlayer(contentsOf: recordingURL)
 			player?.delegate = self
+			player?.currentTime = self.pausedPosition
 			player?.play()
 			isPlaying = true
 		} catch let error as NSError {
