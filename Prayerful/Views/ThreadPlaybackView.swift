@@ -24,11 +24,16 @@ struct ThreadPlaybackView: View {
 						let durationPercentage = prayer.duration / prayerThread.duration
 						let width = durationPercentage * geo.size.width
 						Button {
-							self.audioPlayer.play(from: prayer)
+							if self.isPlaying(prayer) {
+								self.audioPlayer.pause()
+							} else {
+								self.audioPlayer.play(from: prayer)
+							}
 						} label: {
 							RoundedRectangle(cornerRadius: 3)
 								.padding(3)
 								.frame(maxWidth: width)
+								.opacity(self.isPlaying(prayer) ? 0.5 : 1)
 						}
 					}
 				}
@@ -60,6 +65,13 @@ struct ThreadPlaybackView: View {
 			// Set player up with all updated recordings in the thread
 			self.audioPlayer.setRecordings(newVal)
 		}
+	}
+	
+	/// Whether the audio player is currently playing the given recording
+	/// - Parameter recording: The recording in question
+	/// - Returns: If the audio player is playing that recording
+	private func isPlaying(_ recording: PrayerRecording) -> Bool {
+		audioPlayer.isPlaying && audioPlayer.currentRecording == recording
 	}
 }
 

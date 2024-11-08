@@ -92,6 +92,11 @@ class AudioPlayer: NSObject {
 		currentRecording = recordings.first
 	}
 	
+	/// Gets the current playback time
+	var playbackPosition: TimeInterval {
+		player?.currentTime ?? 0
+	}
+	
 	// MARK: - Private Methods
 	
 	/// Plays the current recording in the sequence.
