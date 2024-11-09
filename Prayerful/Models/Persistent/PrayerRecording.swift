@@ -35,6 +35,6 @@ extension PrayerRecording: Hashable { }
 
 extension PrayerRecording {
 	var url: URL {
-		return fileFinder.prayersDirectory.appendingPathComponent(filePath)
+		return fileFinder.prayerURL(forRelativePath: self.filePath)
 	}
 }

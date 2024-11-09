@@ -78,7 +78,7 @@ struct RecordingView: View {
 							.resizable()
 					}
 					Button("Logs") {
-						audioRecorder.cleanUpOldRecordings()
+						fileFinder.cleanUpOldRecordings()
 					}
 				case .error:
 					Button {

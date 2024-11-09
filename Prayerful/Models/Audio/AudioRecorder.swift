@@ -51,20 +51,6 @@ extension AudioRecorder {
 	
 	// MARK: - Private Methods
 
-	/// Creates a file URL for a new recording.
-	///
-	/// - Returns: A unique file URL for saving the new recording.
-	private func getNewRecordingURL() -> URL {
-		// Create a unique filename using the current date and time.
-		let dateFormatter = DateFormatter()
-		dateFormatter.dateFormat = "yyyyMMdd_HHmmss"
-		let dateString = dateFormatter.string(from: Date())
-		let fileName = "Recording_\(dateString)"
-		let directory = fileFinder.prayersDirectory
-		let recordingURL = URL(fileURLWithPath: fileName, relativeTo: directory).appendingPathExtension("m4a")
-		return recordingURL
-	}
-	
 	/// Activates an audio session for a recording.
 	///
 	/// This method sets the audio session category to `.playAndRecord` with the default speaker output option.
@@ -101,40 +87,6 @@ extension AudioRecorder {
 
 extension AudioRecorder {
 	
-	// MARK: - Cleanup methods
-	
-	/// Deletes all audio recordings in the app's documents directory.
-	///
-	/// This method iterates through all files in the app's documents directory and removes those that match the audio file naming convention used by the `AudioRecorder` class.
-	///
-	/// - Warning: This operation cannot be undone, so use it carefully.
-	func cleanUpOldRecordings() {
-		let fileManager = FileManager.default
-		let prayersDirectory = fileFinder.prayersDirectory
-		
-		do {
-			// Get all files in the prayers directory
-			let files = try fileManager.contentsOfDirectory(at: prayersDirectory, includingPropertiesForKeys: nil)
-			
-			for file in files {
-				// Only delete files that match the "Recording_" prefix and ".m4a" extension.
-				if file.lastPathComponent.hasPrefix("Recording_") && file.pathExtension == "m4a" {
-					do {
-						try fileManager.removeItem(at: file)
-						Logger.shared.info("Deleted recording: \(file.lastPathComponent)")
-					} catch {
-						Logger.shared.error("Failed to delete recording \(file.lastPathComponent): \(error.localizedDescription)")
-					}
-				}
-			}
-		} catch {
-			Logger.shared.error("Failed to access recordings directory: \(error.localizedDescription)")
-		}
-	}
-}
-
-extension AudioRecorder {
-	
 	// MARK: - Recording Control Methods
 	
 	/// Starts a new or paused recording.
@@ -164,7 +116,7 @@ extension AudioRecorder {
 			// Setup and start a new recording session
 			try self.activateAudioSession()
 			
-			let audioFilename = getNewRecordingURL()
+			let audioFilename = fileFinder.createRecordingURL()
 			
 			// Define audio recording settings
 			let settings: [String: Any] = [
@@ -220,7 +172,7 @@ extension AudioRecorder {
 		}
 		
 		// Ensure the file was saved.
-		guard FileManager.default.fileExists(atPath: recordedURL.path) else {
+		guard fileFinder.fileExists(at: recordedURL) else {
 			Logger.shared.error("Recording file was not saved at expected path: \(recordedURL.path)")
 			return nil
 		}
