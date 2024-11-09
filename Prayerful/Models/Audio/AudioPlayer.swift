@@ -44,7 +44,7 @@ class AudioPlayer: NSObject {
 	}
 	
 	private var pausePosition: TimeInterval = .zero
-		
+	
 	/// Initializes a new `AudioPlaybackEngine` and sets up a notification to detect when playback finishes.
 	override init() {
 		super.init()
@@ -175,6 +175,7 @@ class AudioPlayer: NSObject {
 		return prevRecordingsDuration + currentTime
 	}
 	
+	/// The percentage of the current recording that has been played back so far
 	func currentRecordingPlaybackPercentage() -> Double {
 		guard let currentTime = self.player?.currentTime else { return 0 }
 		guard let duration = self.currentRecording?.duration else { return 0 }
@@ -201,16 +202,22 @@ extension AudioPlayer: AVAudioPlayerDelegate {
 	}
 }
 
-enum AudioPlayerError: LocalizedError {
-	case noFileUrl
-	case noFileFoundAtPath(_ path: String)
+private extension AudioPlayer {
 	
-	var errorDescription: String? {
-		switch self {
-		case .noFileUrl:
-			return "No file url provided"
-		case .noFileFoundAtPath(let path):
-			return "No file found at path: \(path)"
+	// MARK: Errors
+	
+	enum AudioPlayerError: LocalizedError {
+		case noFileUrl
+		case noFileFoundAtPath(_ path: String)
+		
+		var errorDescription: String? {
+			switch self {
+			case .noFileUrl:
+				return "No file url provided"
+			case .noFileFoundAtPath(let path):
+				return "No file found at path: \(path)"
+			}
 		}
 	}
 }
+
