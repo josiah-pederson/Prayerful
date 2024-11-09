@@ -41,6 +41,8 @@ class FileFinder {
 	
 	/// Creates a directory at the given url if it does not already exist
 	/// - Parameter url: The url at which to create the directory
+	///
+	/// - Warning: If the directory creation process fails the entire app crashes with a fatal error
 	private func createDirectory(at url: URL) {
 		do {
 			if !manager.fileExists(atPath: url.relativePath) {
@@ -54,7 +56,8 @@ class FileFinder {
 				Logger.shared.debug("Directory at \(self.prayersDirectory.path) already exists")
 			}
 		} catch {
-			Logger.shared.error("Unable to create directory at \(self.prayersDirectory.path)")
+			Logger.shared.error("Unable to create directory at \(self.prayersDirectory.path) with error: \(error)")
+			fatalError(error.localizedDescription)
 		}
 	}
 }
