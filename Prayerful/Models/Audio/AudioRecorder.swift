@@ -60,7 +60,7 @@ extension AudioRecorder {
 		dateFormatter.dateFormat = "yyyyMMdd_HHmmss"
 		let dateString = dateFormatter.string(from: Date())
 		let fileName = "Recording_\(dateString)"
-		let directory = FileFinder.documentsDirectory
+		let directory = fileFinder.prayersDirectory
 		let recordingURL = URL(fileURLWithPath: fileName, relativeTo: directory).appendingPathExtension("m4a")
 		return recordingURL
 	}
@@ -110,11 +110,11 @@ extension AudioRecorder {
 	/// - Warning: This operation cannot be undone, so use it carefully.
 	func cleanUpOldRecordings() {
 		let fileManager = FileManager.default
-		let documentsDirectory = FileFinder.documentsDirectory
+		let prayersDirectory = fileFinder.prayersDirectory
 		
 		do {
-			// Get all files in the documents directory
-			let files = try fileManager.contentsOfDirectory(at: documentsDirectory, includingPropertiesForKeys: nil)
+			// Get all files in the prayers directory
+			let files = try fileManager.contentsOfDirectory(at: prayersDirectory, includingPropertiesForKeys: nil)
 			
 			for file in files {
 				// Only delete files that match the "Recording_" prefix and ".m4a" extension.

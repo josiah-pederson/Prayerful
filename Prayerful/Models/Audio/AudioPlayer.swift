@@ -126,7 +126,7 @@ class AudioPlayer: NSObject {
 		}
 		
 		// Check if the file exists at the path.
-		guard FileManager.default.fileExists(atPath: recordingURL.path) else {
+		guard fileFinder.fileExists(at: recordingURL) else {
 			let error = AudioPlayerError.noFileFoundAtPath(recordingURL.path)
 			Logger.shared.error("\(error)")
 			return
