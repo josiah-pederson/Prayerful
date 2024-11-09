@@ -52,8 +52,8 @@ struct RecordingView: View {
 						if let (recordingURL, duration) = audioRecorder.stopRecording() {
 							// Handle the saved recording URL (e.g., add to session)
 							Logger.shared.info("Recording saved at: \(recordingURL)")
-							let prayer = PrayerRecording(filePath: recordingURL, duration: duration)
-							prayerThread.recordings.append(prayer)
+							let prayer = PrayerRecording(url: recordingURL, duration: duration)
+							prayerThread.addRecording(prayer)
 							
 							if !prayerThread.hasTitle {
 								self.titleFocus = true

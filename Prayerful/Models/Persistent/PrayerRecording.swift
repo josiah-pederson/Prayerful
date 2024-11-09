@@ -13,13 +13,13 @@ import SwiftData
 /// - Note: This is a SwiftData persistent storage model
 @Model
 final class PrayerRecording {
-	var filePath: String
+	private var filePath: String
 	var duration: TimeInterval
 	var timestamp: Date
 	var prayerThread: PrayerThread?
 
-	init(filePath: URL, duration: TimeInterval, timestamp: Date = Date()) {
-		self.filePath = filePath.relativePath
+	init(url: URL, duration: TimeInterval, timestamp: Date = Date()) {
+		self.filePath = url.relativePath
 		self.duration = duration
 		self.timestamp = timestamp
 	}

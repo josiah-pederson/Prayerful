@@ -15,4 +15,8 @@ class FileFinder {
 	static var documentsDirectory: URL {
 		FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
 	}
+	
+	static var prayersDirectory: URL {
+		documentsDirectory.appendingPathComponent("prayers")
+	}
 }

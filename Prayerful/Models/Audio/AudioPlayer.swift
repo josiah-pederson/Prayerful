@@ -27,8 +27,9 @@ class AudioPlayer: NSObject {
 	/// The array of recordings to be played sequentially.
 	private var recordings: [PrayerRecording] = []
 	
+	// Published
 	/// The index of the current recording being played.
-	private var currentIndex: Int = 0
+	var currentIndex: Int = 0
 	
 	// Published
 	/// A Boolean published property indicating if playback is active.
@@ -38,15 +39,11 @@ class AudioPlayer: NSObject {
 	/// The current recording being played.
 	var currentRecording: PrayerRecording? {
 		didSet {
-			self.playbackPosition = .zero
+			self.pausePosition = .zero
 		}
 	}
 	
-	var pausedPosition: TimeInterval = .zero
-	
-	var currentTime: TimeInterval {
-		self.player?.currentTime ?? .zero
-	}
+	private var pausePosition: TimeInterval = .zero
 		
 	/// Initializes a new `AudioPlaybackEngine` and sets up a notification to detect when playback finishes.
 	override init() {
@@ -89,7 +86,7 @@ class AudioPlayer: NSObject {
 	/// This method pauses the audio player if playback is active, keeping the current position.
 	func pause() {
 		player?.pause()
-		self.pausedPosition = player?.currentTime ?? 0
+		self.pausePosition = player?.currentTime ?? 0
 		isPlaying = false
 	}
 	
@@ -148,7 +145,7 @@ class AudioPlayer: NSObject {
 			// Initialize the player with the recording URL and start playback.
 			player = try AVAudioPlayer(contentsOf: recordingURL)
 			player?.delegate = self
-			player?.currentTime = self.pausedPosition
+			player?.currentTime = self.pausePosition
 			player?.play()
 			isPlaying = true
 		} catch let error as NSError {
@@ -163,6 +160,27 @@ class AudioPlayer: NSObject {
 	private func audioDidFinishPlaying() {
 		currentIndex += 1
 		playCurrentRecording()
+	}
+	
+	/// Gets the current playback time of the array of recordings
+	/// - Returns: The playback position
+	func currentPlaybackPosition() -> TimeInterval {
+		let index = self.currentIndex
+		let currentTime = self.player?.currentTime ?? .zero
+		
+		guard index > 0 else { return currentTime }
+		
+		let prevRecordingsDuration = self.recordings.prefix(index).reduce(0) { $0 + $1.duration }
+		
+		return prevRecordingsDuration + currentTime
+	}
+	
+	func currentRecordingPlaybackPercentage() -> Double {
+		guard let currentTime = self.player?.currentTime else { return 0 }
+		guard let duration = self.currentRecording?.duration else { return 0 }
+		
+		let percent = currentTime / duration
+		return percent
 	}
 }
 

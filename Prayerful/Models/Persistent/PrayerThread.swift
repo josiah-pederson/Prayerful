@@ -17,8 +17,11 @@ import SwiftData
 final class PrayerThread {
 	var title: String
 	var creationDate: Date
+	/// All prayer recordings in this thread
+	///
+	/// - Note: This is private because these are not guaranteed to be chronological. Use the chronologicalRecording property instead
 	@Relationship(deleteRule: .cascade, inverse: \PrayerRecording.prayerThread)
-	var recordings: [PrayerRecording]
+	private var recordings: [PrayerRecording]
 
 	init(title: String = "", creationDate: Date = Date()) {
 		self.title = title
@@ -28,6 +31,15 @@ final class PrayerThread {
 }
 
 extension PrayerThread: Hashable { }
+
+extension PrayerThread {
+	
+	// MARK: Methods
+	
+	func addRecording(_ recording: PrayerRecording) {
+		self.recordings.append(recording)
+	}
+}
 
 extension PrayerThread {
 	

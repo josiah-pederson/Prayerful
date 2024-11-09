@@ -12,7 +12,8 @@ struct ThreadPlaybackView: View {
 	
 	@State private var audioPlayer = AudioPlayer()
 	
-	@State private var currentTime: TimeInterval = .zero
+	@State private var currentAllTime: TimeInterval = .zero
+	@State private var playbackPercentage: Double = .zero
 	
 	init(_ prayerThread: PrayerThread) {
 		self.prayerThread = prayerThread
@@ -37,11 +38,22 @@ struct ThreadPlaybackView: View {
 								.frame(maxWidth: width)
 								.opacity(self.isPlaying(prayer) ? 0.5 : 1)
 						}
+						.overlay(alignment: .leading) {
+							if self.isPlaying(prayer) {
+								Rectangle()
+									.fill(Color.red.opacity(0.2))
+									.frame(width: width * self.playbackPercentage)
+							}
+						}
 					}
 				}
 			}
 			.frame(maxWidth: .infinity, maxHeight: 30)
-			
+			HStack {
+				Text(Int(self.currentAllTime).description)
+				Spacer()
+				Text(Int(self.duration).description)
+			}
 			switch audioPlayer.isPlaying {
 			case true:
 				Button("Stop playback") {
@@ -58,18 +70,20 @@ struct ThreadPlaybackView: View {
 		}
 		.onAppear {
 			// Set the player up with all recordings in the thread
-			self.audioPlayer.setRecordings(prayerThread.recordings)
+			self.audioPlayer.setRecordings(prayerThread.chronologicalRecordings)
 		}
 		.onDisappear {
 			self.audioPlayer.stop()
 		}
-		.onChange(of: self.prayerThread.recordings) { oldVal, newVal in
+		.onChange(of: self.prayerThread.chronologicalRecordings) { oldVal, newVal in
 			// Set player up with all updated recordings in the thread
 			self.audioPlayer.setRecordings(newVal)
 		}
 		.onReceive(Timer.publish(every: 0.1, on: .main, in: .common).autoconnect()) { _ in
-			self.currentTime = audioPlayer.currentTime
+			self.currentAllTime = self.audioPlayer.currentPlaybackPosition()
+			self.playbackPercentage = self.audioPlayer.currentRecordingPlaybackPercentage()
 		}
+		.animation(.linear, value: self.currentAllTime)
 	}
 	
 	/// Whether the audio player is currently playing the given recording
@@ -78,6 +92,8 @@ struct ThreadPlaybackView: View {
 	private func isPlaying(_ recording: PrayerRecording) -> Bool {
 		audioPlayer.isPlaying && audioPlayer.currentRecording == recording
 	}
+	
+	private var duration: TimeInterval { self.prayerThread.duration }
 }
 
 #Preview {
