@@ -35,6 +35,13 @@ extension PrayerRecording: Hashable { }
 
 extension PrayerRecording {
 	var url: URL {
-		return fileFinder.prayerURL(forRelativePath: self.filePath)
+		return fileFinder.recordingURL(forRelativePath: self.filePath)
+	}
+	
+	/// Deletes the audio recording file of this recorded prayer
+	///
+	/// - Warning: This cannot be undone
+	func deleteRecordingFile() throws {
+		try fileFinder.deleteFile(at: self.filePath)
 	}
 }

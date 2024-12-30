@@ -23,8 +23,17 @@ struct RecordingView: View {
 	
 	@Bindable private var prayerThread: PrayerThread
 	
+	@Query private var matchingPrayerThreads: [PrayerThread]
+		
 	init(_ prayerThread: PrayerThread) {
 		self.prayerThread = prayerThread
+		let id = prayerThread.persistentModelID
+		
+		let predicate = #Predicate<PrayerThread> { thread in
+			thread.persistentModelID == id
+		}
+		
+		_matchingPrayerThreads = Query(filter: predicate)
 	}
 	
 	@FocusState private var titleFocus: Bool
@@ -109,8 +118,7 @@ struct RecordingView: View {
 			}
 		}
 		.onDisappear {
-			// This may need to be stopRecording
-			audioRecorder.pauseRecording()
+			self.handleDisappear()
 		}
 		.onChange(of: phase) { oldPhase, newPhase in
 			switch newPhase {
@@ -158,7 +166,6 @@ struct RecordingView: View {
 						self.dismiss()
 					}
 				}
-				
 			}
 		}
 	}
@@ -171,6 +178,37 @@ extension RecordingView {
 	/// Saves the prayer thread to the model context
 	private func save() {
 		self.modelContext.insert(self.prayerThread)
+	}
+	
+	/// Cancels and deletes the current recording
+	private func cancelRecording() {
+		do {
+			try audioRecorder.cancelRecording()
+		} catch {
+			Logger.shared.error("\(error.localizedDescription)")
+		}
+	}
+	
+	/// Deletes ``PrayerThread`` recordings from file system if it was never saved to the database
+	private func deleteThreadRecordingsIfNotSaved() {
+		do {
+			if self.matchingPrayerThreads.isEmpty {
+				do {
+					try self.prayerThread.deleteAllRecordingFiles()
+					Logger.shared.info("This prayer thread was not found in the database. All recordings deleted")
+				} catch {
+					Logger.shared.error("\(error.localizedDescription)")
+				}
+			}
+		} catch {
+			Logger.shared.error("Unable to fetch threads from database: \(error.localizedDescription)")
+		}
+	}
+	
+	/// Ensures files are deleted if recording was never saved when the view disappears
+	private func handleDisappear() {
+		self.cancelRecording()
+//		self.deleteThreadRecordingsIfNotSaved()
 	}
 }
 

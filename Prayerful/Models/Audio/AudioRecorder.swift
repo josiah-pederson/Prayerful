@@ -199,6 +199,13 @@ extension AudioRecorder {
 			self.recordingStatus = .paused
 		}
 	}
+	
+	func cancelRecording() throws {
+		if let (url, _) = self.stopRecording() {
+			Logger.shared.info("Recording cancelled. Stopping recording")
+			try fileFinder.deleteFile(at: url)
+		}
+	}
 }
 
 extension AudioRecorder {

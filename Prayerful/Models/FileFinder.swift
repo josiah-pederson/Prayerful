@@ -8,25 +8,29 @@
 import Foundation
 import OSLog
 
-let fileFinder = FileFinder.shared
+// Shared instance for entire project. This is probably bad design
+let fileFinder = FileFinder()
 
-/// Ensures recordings are saved to the correct folders
+/// Access point through which to access the filesystem
 ///
 /// The absolute filepath to the documents folder changes from time to time and this ensures that relative paths are combined correctly with absolute base urls
 class FileFinder {
 	
-	/// Shared instance
-	static var shared: FileFinder = .init()
-	
 	/// File manager
-	var manager = FileManager.default
+	private var manager = FileManager.default
 	
 	init() {
 		self.createDirectory(at: self.prayersDirectory)
 	}
 	
+}
+
+extension FileFinder {
+	
+	// MARK: Directory access
+	
 	/// Acquires the system directory to save prayers
-	var prayersDirectory: URL {
+	private var prayersDirectory: URL {
 		self.documentsDirectory.appendingPathComponent("Prayers")
 	}
 	
@@ -45,7 +49,9 @@ class FileFinder {
 	/// Returns the full url for a prayer's relative url
 	/// - Parameter path: The relative path from the prayers folder
 	/// - Returns: The full url
-	func prayerURL(forRelativePath path: String) -> URL {
+	///
+	/// - Note: This assumes the relative path is in the prayers folder
+	func recordingURL(forRelativePath path: String) -> URL {
 		self.prayersDirectory.appendingPathComponent(path)
 	}
 }
@@ -99,21 +105,29 @@ extension FileFinder {
 		
 		do {
 			// Get all files in the prayers directory
-			let files = try manager.contentsOfDirectory(at: prayersDirectory, includingPropertiesForKeys: nil)
-			
-			for file in files {
+			let urls = try manager.contentsOfDirectory(at: prayersDirectory, includingPropertiesForKeys: nil)
+						
+			for url in urls {
 				// Only delete files that match the "Recording_" prefix and ".m4a" extension.
-				if file.lastPathComponent.hasPrefix("Recording_") && file.pathExtension == "m4a" {
-					do {
-						try manager.removeItem(at: file)
-						Logger.shared.info("Deleted recording: \(file.lastPathComponent)")
-					} catch {
-						Logger.shared.error("Failed to delete recording \(file.lastPathComponent): \(error.localizedDescription)")
-					}
+				do {
+					try self.deleteFile(at: url)
+				} catch {
+					Logger.shared.error("Failed to delete file at \(url.path): \(error.localizedDescription)")
 				}
 			}
 		} catch {
 			Logger.shared.error("Failed to access recordings directory: \(error.localizedDescription)")
 		}
+	}
+	
+	func deleteFile(at url: URL) throws {
+		try manager.removeItem(at: url)
+		Logger.shared.debug("Deleted file at \(url.path)")
+	}
+	
+	func deleteFile(at relativePath: String) throws {
+		let url = self.recordingURL(forRelativePath: relativePath)
+
+		try self.deleteFile(at: url)
 	}
 }

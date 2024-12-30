@@ -92,4 +92,34 @@ extension PrayerThread {
 	var isEmpty: Bool {
 		!self.hasTitle && self.count == 0
 	}
+	
+	/// Deletes the recording files for all recordings in this thread.
+	///
+	/// - Warning: This cannot be undone
+	func deleteAllRecordingFiles() throws {
+		var errors: [Error] = []
+		for recording in recordings {
+			do {
+				try recording.deleteRecordingFile()
+			} catch {
+				errors.append(error)
+			}
+		}
+		if !errors.isEmpty {
+			throw PrayerThreadError.failedToDeleteRecordingFiles(errors)
+		}
+	}
+}
+
+private extension PrayerThread {
+	enum PrayerThreadError: LocalizedError {
+		case failedToDeleteRecordingFiles([Error])
+		
+		var errorDescription: String? {
+			switch self {
+			case .failedToDeleteRecordingFiles(let errors):
+				return "Failed to delete recording files:\n\(errors.map(\.localizedDescription).joined(separator: "\n"))"
+			}
+		}
+	}
 }
