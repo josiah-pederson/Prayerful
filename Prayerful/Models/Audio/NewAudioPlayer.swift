@@ -34,6 +34,7 @@ class AudioPlayer3 {
 	private(set) var currentIndex = 0
 	
 	private let bufferSize = 1024
+	@ObservationIgnored
 	var fftMagnitudes = [Float]()
 	
 	init() {
@@ -57,7 +58,6 @@ class AudioPlayer3 {
 		engine.attach(playerNode)
 		let outputFormat = engine.mainMixerNode.outputFormat(forBus: 0)
 		engine.connect(playerNode, to: engine.mainMixerNode, format: outputFormat)
-		
 		
 		let fftSetup = vDSP_DFT_zop_CreateSetup(
 			nil,

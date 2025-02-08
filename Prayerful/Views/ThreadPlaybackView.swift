@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Charts
 
 struct ThreadPlaybackView: View {
 	private var prayerThread: PrayerThread
@@ -14,6 +15,11 @@ struct ThreadPlaybackView: View {
 	
 	@State var data: [Float] = Array(repeating: 0, count: PlayerConstants.barAmount)
 		.map { _ in Float.random(in: 1 ... PlayerConstants.magnitudeLimit) }
+	let timer = Timer.publish(
+		every: Constants.updateInterval,
+		on: .main,
+		in: .common
+	).autoconnect()
 	
 	init(_ prayerThread: PrayerThread) {
 		self.prayerThread = prayerThread
@@ -72,6 +78,28 @@ struct ThreadPlaybackView: View {
 					audioPlayer.play()
 				}
 			}
+			if audioPlayer.isPlaying {
+				Chart(Array(data.enumerated()), id: \.0) { index, magnitude in
+					BarMark(
+						x: .value("Frequency", String(index)),
+						y: .value("Magnitude", magnitude)
+					)
+					.foregroundStyle(
+						Color(
+							hue: 0.3 - Double((magnitude / Constants.magnitudeLimit) / 5),
+							saturation: 1,
+							brightness: 1,
+							opacity: 0.7
+						)
+					)
+				}
+				.chartYScale(domain: 0 ... Constants.magnitudeLimit)
+				.chartXAxis(.hidden)
+				.chartYAxis(.hidden)
+				.frame(height: 100)
+				.onReceive(timer, perform: updateData)
+			}
+			
 		}
 		.onChange(of: prayerThread.chronologicalRecordings) { _, newVal in
 			audioPlayer.enqueue(newVal)
@@ -83,11 +111,11 @@ struct ThreadPlaybackView: View {
 	
 	func updateData(_: Date) {
 		if audioPlayer.isPlaying {
-//			withAnimation(.easeOut(duration: 0.08)) {
-//				data = audioPlayer.fftMagnitudes.map {
-//					min($0, PlayerConstants.magnitudeLimit)
-//				}
-//			}
+			withAnimation(.easeOut(duration: 0.08)) {
+				data = audioPlayer.fftMagnitudes.map {
+					min($0, PlayerConstants.magnitudeLimit)
+				}
+			}
 		}
 	}
 	
