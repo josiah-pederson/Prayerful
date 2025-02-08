@@ -10,10 +10,10 @@ import SwiftUI
 struct ThreadPlaybackView: View {
 	private var prayerThread: PrayerThread
 	
-	@State private var audioPlayer = AudioPlayer()
+	@State private var audioPlayer = AudioPlayer3()
 	
-	@State private var currentAllTime: TimeInterval = .zero
-	@State private var playbackPercentage: Double = .zero
+	@State var data: [Float] = Array(repeating: 0, count: PlayerConstants.barAmount)
+		.map { _ in Float.random(in: 1 ... PlayerConstants.magnitudeLimit) }
 	
 	init(_ prayerThread: PrayerThread) {
 		self.prayerThread = prayerThread
@@ -27,33 +27,38 @@ struct ThreadPlaybackView: View {
 						let durationPercentage = prayer.duration / prayerThread.duration
 						let width = durationPercentage * geo.size.width
 						Button {
-							if self.isPlaying(prayer) {
-								self.audioPlayer.pause()
+							if audioPlayer.isSelected(prayer) {
+								audioPlayer.pause()
 							} else {
-								self.audioPlayer.play(from: prayer)
+								audioPlayer.stop()
+								DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+									audioPlayer.play(url: prayer.url)
+								}
 							}
 						} label: {
 							RoundedRectangle(cornerRadius: 3)
 								.padding(3)
 								.frame(maxWidth: width)
-								.opacity(self.isPlaying(prayer) ? 0.5 : 1)
+								.opacity(audioPlayer.isSelected(prayer) ? 0.5 : 1)
+//								.opacity(self.isPlaying(prayer) ? 0.5 : 1)
 						}
-						.overlay(alignment: .leading) {
-							if self.isPlaying(prayer) {
-								Rectangle()
-									.fill(Color.red.opacity(0.2))
-									.frame(width: width * self.playbackPercentage)
-							}
-						}
+//						.overlay(alignment: .leading) {
+//							if self.isPlaying(prayer) {
+//								Rectangle()
+//									.fill(Color.red.opacity(0.2))
+//									.frame(width: width * self.playbackPercentage)
+//							}
+//						}
 					}
 				}
 			}
+			.onChange(of: audioPlayer.currentIndex) { _, _ in }
 			.frame(maxWidth: .infinity, maxHeight: 30)
-			HStack {
-				Text(Int(self.currentAllTime).description)
-				Spacer()
-				Text(Int(self.duration).description)
-			}
+//			HStack {
+//				Text(Int(self.currentAllTime).description)
+//				Spacer()
+//				Text(Int(self.duration).description)
+//			}
 			switch audioPlayer.isPlaying {
 			case true:
 				Button("Stop playback") {
@@ -68,32 +73,32 @@ struct ThreadPlaybackView: View {
 				}
 			}
 		}
+		.onChange(of: prayerThread.chronologicalRecordings) { _, newVal in
+			audioPlayer.enqueue(newVal)
+		}
 		.onAppear {
-			// Set the player up with all recordings in the thread
-			self.audioPlayer.setRecordings(prayerThread.chronologicalRecordings)
+			audioPlayer.enqueue(prayerThread.chronologicalRecordings)
 		}
-		.onDisappear {
-			self.audioPlayer.stop()
-		}
-		.onChange(of: self.prayerThread.chronologicalRecordings) { oldVal, newVal in
-			// Set player up with all updated recordings in the thread
-			self.audioPlayer.setRecordings(newVal)
-		}
-		.onReceive(Timer.publish(every: 0.1, on: .main, in: .common).autoconnect()) { _ in
-			self.currentAllTime = self.audioPlayer.currentPlaybackPosition()
-			self.playbackPercentage = self.audioPlayer.currentRecordingPlaybackPercentage()
-		}
-		.animation(.linear, value: self.currentAllTime)
 	}
 	
-	/// Whether the audio player is currently playing the given recording
-	/// - Parameter recording: The recording in question
-	/// - Returns: If the audio player is playing that recording
-	private func isPlaying(_ recording: PrayerRecording) -> Bool {
-		audioPlayer.isPlaying && audioPlayer.currentRecording == recording
+	func updateData(_: Date) {
+		if audioPlayer.isPlaying {
+//			withAnimation(.easeOut(duration: 0.08)) {
+//				data = audioPlayer.fftMagnitudes.map {
+//					min($0, PlayerConstants.magnitudeLimit)
+//				}
+//			}
+		}
 	}
 	
-	private var duration: TimeInterval { self.prayerThread.duration }
+	
+	func playButtonTapped() {
+		if audioPlayer.isPlaying {
+			audioPlayer.pause()
+		} else {
+			audioPlayer.play()
+		}
+	}
 }
 
 #Preview {
