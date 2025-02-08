@@ -8,216 +8,198 @@
 import Foundation
 import AVFoundation
 import OSLog
+import Accelerate
 
-/// `AudioPlaybackEngine` is responsible for sequentially playing back an array of `PrayerRecording` instances.
-///
-/// This class manages playback, including the ability to:
-/// - Start playback from the first recording or a specified recording
-/// - Play each recording in sequence
-/// - Pause, stop, and restart playback
-///
-/// The `AudioPlaybackEngine` uses `AVAudioPlayer` for audio playback, and it observes the playback status to
-/// automatically transition to the next recording in the sequence when one finishes.
+/// A class to manage audio playback using AVAudioEngine.
+/// It supports a queue of audio files and plays them sequentially.
 @Observable
-class AudioPlayer: NSObject {
+class AudioPlayer3 {
+	@ObservationIgnored
+	private var engine = AVAudioEngine()
+	@ObservationIgnored
+	private var playerNode = AVAudioPlayerNode()
 	
-	/// The current audio player responsible for playback.
-	private var player: AVAudioPlayer?
+	/// The queue of URLs to play
+	@ObservationIgnored
+	private var queue = [PlayablePrayer]()
 	
-	/// The array of recordings to be played sequentially.
-	private var recordings: [PrayerRecording] = []
+	/// Published property to track playback state
+	var isPlaying = false
+	private(set) var currentIndex = 0
 	
-	// Published
-	/// The index of the current recording being played.
-	var currentIndex: Int = 0
+	private let bufferSize = 1024
+	@ObservationIgnored
+	var fftMagnitudes = [Float]()
 	
-	// Published
-	/// A Boolean published property indicating if playback is active.
-	var isPlaying: Bool = false
+	init() {
+		observeInterruptionNotifications()
+		setupAudioEngine()
+	}
 	
-	// Published
-	/// The current recording being played.
-	var currentRecording: PrayerRecording? {
-		didSet {
-			self.pausePosition = .zero
+	func isSelected(_ prayer: PrayerRecording) -> Bool {
+		guard !queue.isEmpty else { return false }
+		return queue[currentIndex].url == prayer.url && isPlaying
+	}
+	
+	func enqueue(_ prayers: [PrayerRecording]) {
+		let urls = prayers.map { $0.url }
+		let prayerQueue = urls.compactMap { PlayablePrayer(url: $0) }
+		queue = prayerQueue
+	}
+	
+	/// Configures the audio engine and attaches the player node.
+	private func setupAudioEngine() {
+		engine.attach(playerNode)
+		let outputFormat = engine.mainMixerNode.outputFormat(forBus: 0)
+		engine.connect(playerNode, to: engine.mainMixerNode, format: outputFormat)
+		
+		let fftSetup = vDSP_DFT_zop_CreateSetup(
+			nil,
+			UInt(bufferSize),
+			vDSP_DFT_Direction.FORWARD
+		)
+		
+		engine.mainMixerNode.installTap(
+			onBus: 0,
+			bufferSize: UInt32(bufferSize),
+			format: nil
+		) { [self] buffer, _ in
+			let channelData = buffer.floatChannelData?[0]
+			fftMagnitudes = fft(data: channelData!, setup: fftSetup!)
 		}
 	}
 	
-	private var pausePosition: TimeInterval = .zero
-	
-	/// Initializes a new `AudioPlaybackEngine` and sets up a notification to detect when playback finishes.
-	override init() {
-		super.init()
-	}
-	
-	// MARK: - Playback Control Methods
-	
-	/// Sets the sequence of recordings to be played.
-	///
-	/// - Parameter recordings: An array of `PrayerRecording` objects to play in sequence.
-	///
-	/// After calling this method, playback will start from the first recording in the provided array unless
-	/// a specific recording is passed to the `play(from:)` method.
-	func setRecordings(_ recordings: [PrayerRecording]) {
-		self.recordings = recordings
-		self.currentIndex = 0
-		self.currentRecording = recordings.first
-	}
-	
-	/// Starts playback from the beginning of the recording sequence or from a specific recording.
-	///
-	/// - Parameter recording: The specific `PrayerRecording` to start playback from. If `nil`, playback
-	///   starts from the beginning of the sequence or resumes if already in progress.
-	///
-	/// This method sets the `currentIndex` to the specified recording if provided, then calls
-	/// `playCurrentRecording()` to begin playback.
-	func play(from recording: PrayerRecording? = nil) {
-		if let recording = recording {
-			// If a specific recording is provided, set it as the starting point.
-			if let index = recordings.firstIndex(of: recording) {
-				currentIndex = index
+	/// Starts playback from the current file in the queue.
+	func play(url: URL? = nil) {
+		guard !queue.isEmpty, currentIndex < queue.count else {
+			print("Playback stopped: Queue empty or index out of range")
+			return
+		}
+		
+		if !engine.isRunning {
+			try? engine.start()
+		}
+		
+		if let url, let index = queue.firstIndex(where: { $0.url == url }) {
+			currentIndex = index
+		}
+		
+		let currentPrayer = queue[currentIndex]
+		print("Playing file: \(currentPrayer.url.lastPathComponent), index: \(currentIndex)")
+		
+		// Stop and reset player before scheduling a new file
+		//		playerNode.stop()
+		//		playerNode.reset()
+		
+		playerNode.scheduleFile(currentPrayer.audioFile, at: nil, completionCallbackType: .dataRendered) { [weak self] _ in
+			DispatchQueue.main.async {
+				print("Completion handler triggered for: \(currentPrayer.url.lastPathComponent)")
+				self?.handlePlaybackCompletion()
 			}
 		}
-		playCurrentRecording()
+		
+		playerNode.play()
+		isPlaying = true
 	}
 	
-	/// Pauses playback of the current recording.
-	///
-	/// This method pauses the audio player if playback is active, keeping the current position.
+	/// Pauses playback.
 	func pause() {
-		player?.pause()
-		self.pausePosition = player?.currentTime ?? 0
+		playerNode.pause()
 		isPlaying = false
 	}
 	
-	/// Stops playback and resets to the first recording in the sequence.
-	///
-	/// After calling this method, playback will restart from the beginning when `play()` is called.
+	/// Stops playback and resets the queue.
 	func stop() {
-		player?.stop()
-		isPlaying = false
+		playerNode.stop()
+		playerNode.reset() // Reset the playerNode to clear scheduled playback
+		engine.stop()
+		
 		currentIndex = 0
-		currentRecording = recordings.first
+		isPlaying = false
 	}
 	
-	// MARK: - Private Methods
-	
-	/// Plays the current recording in the sequence.
-	///
-	/// This method checks if there are any recordings left to play. If so, it retrieves the recording's URL,
-	/// initializes an `AVAudioPlayer`, and begins playback. If all recordings have finished playing, it calls `stop()`.
-	private func playCurrentRecording() {
-		guard currentIndex < recordings.count else {
-			stop() // End of sequence
+	private func handlePlaybackCompletion() {
+		guard isPlaying else {
+			print("Playback completion ignored, isPlaying is false")
 			return
 		}
 		
-		// Only update current recording if it has changed
-		let currentRecording = recordings[currentIndex]
-		if self.currentRecording != currentRecording {
-			self.currentRecording = currentRecording
-		}
-		
-		// Ensure the URL is valid
-		guard let recordingURL = self.currentRecording?.url else {
-			let error = AudioPlayerError.noFileUrl
-			Logger.shared.error("\(error)")
-			return
-		}
-		
-		// Check if the file exists at the path.
-		guard fileFinder.fileExists(at: recordingURL) else {
-			let error = AudioPlayerError.noFileFoundAtPath(recordingURL.path)
-			Logger.shared.error("\(error)")
-			return
-		}
-		
-		// Configure audio session for playback
-		do {
-			let session = AVAudioSession.sharedInstance()
-			try session.setCategory(.playback)
-			try session.setActive(true)
-		} catch {
-			Logger.shared.error("Failed to set audio session for playback: \(error.localizedDescription)")
-		}
-		
-		do {
-			// Initialize the player with the recording URL and start playback.
-			player = try AVAudioPlayer(contentsOf: recordingURL)
-			player?.delegate = self
-			player?.currentTime = self.pausePosition
-			player?.play()
-			isPlaying = true
-		} catch let error as NSError {
-			Logger.shared.error("Error playing audio: \(error), \(error.userInfo)")
-		}
-	}
-	
-	/// Handles the completion of audio playback for a recording.
-	///
-	/// This method is triggered when a recording finishes playing. It increments `currentIndex` and
-	/// calls `playCurrentRecording()` to proceed to the next recording in the sequence.
-	private func audioDidFinishPlaying() {
 		currentIndex += 1
-		playCurrentRecording()
-	}
-	
-	/// Gets the current playback time of the array of recordings
-	/// - Returns: The playback position
-	func currentPlaybackPosition() -> TimeInterval {
-		let index = self.currentIndex
-		let currentTime = self.player?.currentTime ?? .zero
+		print("Moving to next file, new index: \(currentIndex)")
 		
-		guard index > 0 else { return currentTime }
-		
-		let prevRecordingsDuration = self.recordings.prefix(index).reduce(0) { $0 + $1.duration }
-		
-		return prevRecordingsDuration + currentTime
-	}
-	
-	/// The percentage of the current recording that has been played back so far
-	func currentRecordingPlaybackPercentage() -> Double {
-		guard let currentTime = self.player?.currentTime else { return 0 }
-		guard let duration = self.currentRecording?.duration else { return 0 }
-		
-		let percent = currentTime / duration
-		return percent
-	}
-}
-
-extension AudioPlayer: AVAudioPlayerDelegate {
-	
-	/// Called when `AVAudioPlayer` finishes playback of an audio recording.
-	///
-	/// - Parameters:
-	///   - player: The `AVAudioPlayer` instance that finished playback.
-	///   - flag: A Boolean indicating if playback completed successfully.
-	///
-	/// If playback completes successfully, this method calls `audioDidFinishPlaying(_:)` to
-	/// trigger the transition to the next recording in the sequence.
-	func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
-		if flag {
-			audioDidFinishPlaying()
+		if currentIndex < queue.count {
+			play()
+		} else {
+			print("Playback complete, stopping")
+			stop()
 		}
 	}
 }
 
-private extension AudioPlayer {
+private extension AudioPlayer3 {
 	
-	// MARK: Errors
+	// MARK: Visualizer methods
 	
-	enum AudioPlayerError: LocalizedError {
-		case noFileUrl
-		case noFileFoundAtPath(_ path: String)
+	func fft(data: UnsafeMutablePointer<Float>, setup: OpaquePointer) -> [Float] {
+		var realIn = [Float](repeating: 0, count: bufferSize)
+		var imagIn = [Float](repeating: 0, count: bufferSize)
+		var realOut = [Float](repeating: 0, count: bufferSize)
+		var imagOut = [Float](repeating: 0, count: bufferSize)
+			
+		for i in 0 ..< bufferSize {
+			realIn[i] = data[i]
+		}
 		
-		var errorDescription: String? {
-			switch self {
-			case .noFileUrl:
-				return "No file url provided"
-			case .noFileFoundAtPath(let path):
-				return "No file found at path: \(path)"
+		vDSP_DFT_Execute(setup, &realIn, &imagIn, &realOut, &imagOut)
+		
+		var magnitudes = [Float](repeating: 0, count: Constants.barAmount)
+		
+		realOut.withUnsafeMutableBufferPointer { realBP in
+			imagOut.withUnsafeMutableBufferPointer { imagBP in
+				var complex = DSPSplitComplex(realp: realBP.baseAddress!, imagp: imagBP.baseAddress!)
+				vDSP_zvabs(&complex, 1, &magnitudes, 1, UInt(Constants.barAmount))
 			}
 		}
+		
+		var normalizedMagnitudes = [Float](repeating: 0.0, count: Constants.barAmount)
+		var scalingFactor = Float(1)
+		vDSP_vsmul(&magnitudes, 1, &scalingFactor, &normalizedMagnitudes, 1, UInt(Constants.barAmount))
+			
+		return normalizedMagnitudes
 	}
 }
 
+private extension AudioPlayer3 {
+	
+	// MARK: Notification observer methods
+	
+	private func observeInterruptionNotifications() {
+		NotificationCenter.default.addObserver(self, selector: #selector(handleInterruption), name: AVAudioSession.interruptionNotification, object: nil)
+	}
+	
+	@objc private func handleInterruption(notification: Notification) {
+		guard let info = notification.userInfo,
+			  let typeValue = info[AVAudioSessionInterruptionTypeKey] as? UInt,
+			  let type = AVAudioSession.InterruptionType(rawValue: typeValue) else { return }
+		
+		if type == .began {
+			pause()
+		}
+	}
+}
+
+private struct PlayablePrayer: Identifiable {
+	let url: URL
+	let audioFile: AVAudioFile
+	
+	var id: String { url.absoluteString }
+	
+	init?(url: URL) {
+		guard let audioFile = try? AVAudioFile(forReading: url) else {
+			return nil
+		}
+		
+		self.url = url
+		self.audioFile = audioFile
+	}
+}

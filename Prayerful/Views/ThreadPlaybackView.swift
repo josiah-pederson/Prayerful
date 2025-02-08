@@ -13,8 +13,8 @@ struct ThreadPlaybackView: View {
 	
 	@State private var audioPlayer = AudioPlayer3()
 	
-	@State var data: [Float] = Array(repeating: 0, count: PlayerConstants.barAmount)
-		.map { _ in Float.random(in: 1 ... PlayerConstants.magnitudeLimit) }
+	@State var data: [Float] = Array(repeating: 0, count: Constants.barAmount)
+		.map { _ in Float.random(in: 1 ... Constants.magnitudeLimit) }
 	let timer = Timer.publish(
 		every: Constants.updateInterval,
 		on: .main,
@@ -46,60 +46,49 @@ struct ThreadPlaybackView: View {
 								.padding(3)
 								.frame(maxWidth: width)
 								.opacity(audioPlayer.isSelected(prayer) ? 0.5 : 1)
-//								.opacity(self.isPlaying(prayer) ? 0.5 : 1)
+							//								.opacity(self.isPlaying(prayer) ? 0.5 : 1)
 						}
-//						.overlay(alignment: .leading) {
-//							if self.isPlaying(prayer) {
-//								Rectangle()
-//									.fill(Color.red.opacity(0.2))
-//									.frame(width: width * self.playbackPercentage)
-//							}
-//						}
+						//						.overlay(alignment: .leading) {
+						//							if self.isPlaying(prayer) {
+						//								Rectangle()
+						//									.fill(Color.red.opacity(0.2))
+						//									.frame(width: width * self.playbackPercentage)
+						//							}
+						//						}
 					}
 				}
 			}
 			.onChange(of: audioPlayer.currentIndex) { _, _ in }
 			.frame(maxWidth: .infinity, maxHeight: 30)
-//			HStack {
-//				Text(Int(self.currentAllTime).description)
-//				Spacer()
-//				Text(Int(self.duration).description)
-//			}
+			//			HStack {
+			//				Text(Int(self.currentAllTime).description)
+			//				Spacer()
+			//				Text(Int(self.duration).description)
+			//			}
 			switch audioPlayer.isPlaying {
 			case true:
-				Button("Stop playback") {
-					audioPlayer.stop()
+				HStack {
+					Button("Stop", systemImage: "stop.circle") {
+						audioPlayer.stop()
+					}
+					.labelStyle(.iconOnly)
+					.font(.title)
+					Button("Pause", systemImage: "pause.circle") {
+						audioPlayer.pause()
+					}
+					.labelStyle(.iconOnly)
+					.font(.title)
 				}
-				Button("Pause playback") {
-					audioPlayer.pause()
-				}
+				WaveformChartView(data: data)
+					.frame(width: 250, height: 100)
+					.onReceive(timer, perform: updateData)
 			case false:
-				Button("Play from start") {
+				Button("Play", systemImage: "play.circle") {
 					audioPlayer.play()
 				}
+				.labelStyle(.iconOnly)
+				.font(.title)
 			}
-			if audioPlayer.isPlaying {
-				Chart(Array(data.enumerated()), id: \.0) { index, magnitude in
-					BarMark(
-						x: .value("Frequency", String(index)),
-						y: .value("Magnitude", magnitude)
-					)
-					.foregroundStyle(
-						Color(
-							hue: 0.3 - Double((magnitude / Constants.magnitudeLimit) / 5),
-							saturation: 1,
-							brightness: 1,
-							opacity: 0.7
-						)
-					)
-				}
-				.chartYScale(domain: 0 ... Constants.magnitudeLimit)
-				.chartXAxis(.hidden)
-				.chartYAxis(.hidden)
-				.frame(height: 100)
-				.onReceive(timer, perform: updateData)
-			}
-			
 		}
 		.onChange(of: prayerThread.chronologicalRecordings) { _, newVal in
 			audioPlayer.enqueue(newVal)
@@ -109,22 +98,21 @@ struct ThreadPlaybackView: View {
 		}
 	}
 	
+}
+
+private extension ThreadPlaybackView {
+	
+	// MARK: Methods
+	
+	/// Updates the chart data points for the audio visualizer
+	/// - Parameter _: The date of the timer publisher event
 	func updateData(_: Date) {
 		if audioPlayer.isPlaying {
 			withAnimation(.easeOut(duration: 0.08)) {
 				data = audioPlayer.fftMagnitudes.map {
-					min($0, PlayerConstants.magnitudeLimit)
+					min($0, Constants.magnitudeLimit)
 				}
 			}
-		}
-	}
-	
-	
-	func playButtonTapped() {
-		if audioPlayer.isPlaying {
-			audioPlayer.pause()
-		} else {
-			audioPlayer.play()
 		}
 	}
 }
