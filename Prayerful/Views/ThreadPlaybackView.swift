@@ -11,7 +11,7 @@ import Charts
 struct ThreadPlaybackView: View {
 	private var prayerThread: PrayerThread
 	
-	@State private var audioPlayer = AudioPlayer3()
+	@State private var audioPlayer = AudioPlayer()
 	
 	@State var data: [Float] = Array(repeating: 0, count: Constants.barAmount)
 		.map { _ in Float.random(in: 1 ... Constants.magnitudeLimit) }
