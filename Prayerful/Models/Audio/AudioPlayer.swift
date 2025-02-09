@@ -46,6 +46,10 @@ class AudioPlayer {
 	@ObservationIgnored
 	var fftMagnitudes = [Float]()
 	
+	var totalDuration: TimeInterval {
+		queue.reduce(0) { $0 + $1.duration }
+	}
+	
 	// MARK: - Initialization
 	
 	/// Initializes a new instance of `AudioPlayer`, setting up the audio engine
@@ -73,8 +77,7 @@ class AudioPlayer {
 	/// Enqueues a list of `PrayerRecording` objects for playback.
 	/// - Parameter prayers: An array of `PrayerRecording` objects to enqueue.
 	func enqueue(_ prayers: [PrayerRecording]) {
-		let urls = prayers.map { $0.url }
-		let prayerQueue = urls.compactMap { PlayablePrayer(url: $0) }
+		let prayerQueue = prayers.compactMap { PlayablePrayer($0) }
 		queue = prayerQueue
 	}
 	

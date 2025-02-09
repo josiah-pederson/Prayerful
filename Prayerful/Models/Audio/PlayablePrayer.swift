@@ -11,15 +11,16 @@ import AVFoundation
 struct PlayablePrayer: Identifiable {
 	let url: URL
 	let audioFile: AVAudioFile
+	let duration: TimeInterval
 	
 	var id: String { url.absoluteString }
 	
-	init?(url: URL) {
-		guard let audioFile = try? AVAudioFile(forReading: url) else {
+	init?(_ prayer: PrayerRecording) {
+		guard let audioFile = try? AVAudioFile(forReading: prayer.url) else {
 			return nil
 		}
-		
-		self.url = url
+		url = prayer.url
 		self.audioFile = audioFile
+		duration = prayer.duration
 	}
 }
