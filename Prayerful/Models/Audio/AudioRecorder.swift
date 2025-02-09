@@ -31,7 +31,7 @@ class AudioRecorder {
 	/// - `.error`: When an error occurs during recording.
 	///
 	/// > Note: This is a published property to notify observers of any changes.
-	var recordingStatus: AudioRecordingStatus = .stopped
+	var recordingStatus = AudioRecordingStatus.stopped
 	
 	// MARK: - Initialization and Deinitialization
 	

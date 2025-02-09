@@ -14,8 +14,8 @@ struct ThreadPlaybackView: View {
 	@State private var audioPlayer = AudioPlayer()
 	
 	@State var data: [Float] = Array(repeating: 0, count: Constants.barAmount)
-		.map { _ in Float.random(in: 1 ... Constants.magnitudeLimit) }
-	let timer = Timer.publish(
+	
+	private let timer = Timer.publish(
 		every: Constants.updateInterval,
 		on: .main,
 		in: .common
@@ -71,14 +71,12 @@ struct ThreadPlaybackView: View {
 					Button("Stop", systemImage: "stop.circle") {
 						audioPlayer.stop()
 					}
-					.labelStyle(.iconOnly)
-					.font(.title)
 					Button("Pause", systemImage: "pause.circle") {
 						audioPlayer.pause()
 					}
-					.labelStyle(.iconOnly)
-					.font(.title)
 				}
+				.labelStyle(.iconOnly)
+				.font(.title)
 				WaveformChartView(data: data)
 					.frame(width: 250, height: 100)
 					.onReceive(timer, perform: updateData)
@@ -96,9 +94,13 @@ struct ThreadPlaybackView: View {
 		.onAppear {
 			audioPlayer.enqueue(prayerThread.chronologicalRecordings)
 		}
+		.onDisappear {
+			audioPlayer.stop()
+		}
 	}
-	
 }
+
+
 
 private extension ThreadPlaybackView {
 	

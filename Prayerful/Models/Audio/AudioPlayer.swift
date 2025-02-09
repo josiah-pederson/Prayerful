@@ -55,6 +55,11 @@ class AudioPlayer {
 		setupAudioEngine()
 	}
 	
+	deinit {
+		stop()
+		NotificationCenter.default.removeObserver(self)
+	}
+	
 	// MARK: - Queue Management
 	
 	/// Checks if a specific prayer recording is currently selected and playing.
