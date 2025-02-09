@@ -53,7 +53,6 @@ struct RecordingView: View {
 			if audioRecorder.recordingStatus == .stopped {
 				ThreadPlaybackView(prayerThread)
 			}
-			Text(audioRecorder.recordingStatus.description)
 			Group {
 				switch audioRecorder.recordingStatus {
 				case .recording:
