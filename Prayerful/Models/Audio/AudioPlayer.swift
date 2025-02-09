@@ -46,9 +46,22 @@ class AudioPlayer {
 	@ObservationIgnored
 	var fftMagnitudes = [Float]()
 	
+	/// The current playback time in seconds.
+	var currentTime: TimeInterval = 0
+	
+	/// The total duration of the current audio file in seconds.
+	var currentRecordingDuration: TimeInterval {
+		queue.isEmpty ? 0 : queue[currentIndex].duration
+	}
+	
 	var totalDuration: TimeInterval {
 		queue.reduce(0) { $0 + $1.duration }
 	}
+	
+	private var paused = false
+	
+	/// A timer to update playback progress.
+	private var progressTimer: Timer?
 	
 	// MARK: - Initialization
 	
@@ -77,8 +90,8 @@ class AudioPlayer {
 	/// Enqueues a list of `PrayerRecording` objects for playback.
 	/// - Parameter prayers: An array of `PrayerRecording` objects to enqueue.
 	func enqueue(_ prayers: [PrayerRecording]) {
-		let prayerQueue = prayers.compactMap { PlayablePrayer($0) }
-		queue = prayerQueue
+		let queue = prayers.compactMap { try? $0.playable() }
+		self.queue = queue
 	}
 	
 	// MARK: - Audio Engine Setup
@@ -119,6 +132,14 @@ class AudioPlayer {
 			try? engine.start()
 		}
 		
+		if paused {
+			playerNode.play()
+			paused = false
+			isPlaying = true
+			startProgressTimer()
+			return
+		}
+		
 		if let url, let index = queue.firstIndex(where: { $0.url == url }) {
 			currentIndex = index
 		}
@@ -126,6 +147,8 @@ class AudioPlayer {
 		let currentPrayer = queue[currentIndex]
 		print("Playing file: \(currentPrayer.url.lastPathComponent), index: \(currentIndex)")
 		
+		currentTime = 0
+				
 		playerNode.scheduleFile(currentPrayer.audioFile, at: nil, completionCallbackType: .dataRendered) { [weak self] _ in
 			DispatchQueue.main.async {
 				print("Completion handler triggered for: \(currentPrayer.url.lastPathComponent)")
@@ -135,11 +158,13 @@ class AudioPlayer {
 		
 		playerNode.play()
 		isPlaying = true
+		startProgressTimer()
 	}
 	
 	/// Pauses the currently playing audio.
 	func pause() {
 		playerNode.pause()
+		paused = true
 		isPlaying = false
 	}
 	
@@ -148,8 +173,24 @@ class AudioPlayer {
 		playerNode.stop()
 		playerNode.reset()
 		engine.stop()
+		
+		paused = false
 		currentIndex = 0
 		isPlaying = false
+		currentTime = 0
+		progressTimer?.invalidate()
+	}
+	
+	/// Updates playback progress every 0.1 seconds.
+	private func startProgressTimer() {
+		progressTimer?.invalidate() // Invalidate existing timer
+		progressTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+			guard let self, self.isPlaying, self.currentTime < self.currentRecordingDuration else {
+				self?.progressTimer?.invalidate()
+				return
+			}
+			self.currentTime += 0.1
+		}
 	}
 	
 	/// Handles the completion of audio playback and plays the next file if available.

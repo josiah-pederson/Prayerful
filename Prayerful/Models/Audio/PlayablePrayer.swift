@@ -7,6 +7,7 @@
 
 import Foundation
 import AVFoundation
+import OSLog
 
 struct PlayablePrayer: Identifiable {
 	let url: URL
@@ -15,12 +16,10 @@ struct PlayablePrayer: Identifiable {
 	
 	var id: String { url.absoluteString }
 	
-	init?(_ prayer: PrayerRecording) {
-		guard let audioFile = try? AVAudioFile(forReading: prayer.url) else {
-			return nil
-		}
-		url = prayer.url
+	init(at url: URL, duration: TimeInterval) throws {
+		let audioFile = try AVAudioFile(forReading: url)
+		self.url = url
 		self.audioFile = audioFile
-		duration = prayer.duration
+		self.duration = duration
 	}
 }

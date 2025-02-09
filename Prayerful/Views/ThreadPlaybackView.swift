@@ -32,6 +32,7 @@ struct ThreadPlaybackView: View {
 					ForEach(prayerThread.chronologicalRecordings) { prayer in
 						let durationPercentage = prayer.duration / prayerThread.duration
 						let width = durationPercentage * geo.size.width
+						
 						Button {
 							if audioPlayer.isSelected(prayer) {
 								audioPlayer.pause()
@@ -42,31 +43,24 @@ struct ThreadPlaybackView: View {
 								}
 							}
 						} label: {
-							RoundedRectangle(cornerRadius: 3)
-								.padding(3)
-								.frame(maxWidth: width)
-								.opacity(audioPlayer.isSelected(prayer) ? 0.5 : 1)
-							//								.opacity(self.isPlaying(prayer) ? 0.5 : 1)
+							if audioPlayer.isSelected(prayer) {
+								ProgressView(
+									value: min(audioPlayer.currentTime, audioPlayer.currentRecordingDuration),
+									total: audioPlayer.currentRecordingDuration
+								)
+							} else {
+								ProgressView(value: 1, total: 1)
+							}
 						}
-						//						.overlay(alignment: .leading) {
-						//							if self.isPlaying(prayer) {
-						//								Rectangle()
-						//									.fill(Color.red.opacity(0.2))
-						//									.frame(width: width * self.playbackPercentage)
-						//							}
-						//						}
+						.progressViewStyle(.linear)
+						.frame(maxWidth: width)
+						.font(.title)
 					}
 				}
 			}
-			.onChange(of: audioPlayer.currentIndex) { _, _ in }
-			.frame(maxWidth: .infinity, maxHeight: 30)
-			//			HStack {
-			//				Text(Int(self.currentAllTime).description)
-			//				Spacer()
-			//				Text(Int(self.duration).description)
-			//			}
-			switch audioPlayer.isPlaying {
-			case true:
+			.frame(maxHeight: 30)
+			Text("Thread is \(audioPlayer.totalDuration, specifier: "%.0f") seconds.")
+			if audioPlayer.isPlaying {
 				HStack {
 					Button("Stop", systemImage: "stop.circle") {
 						audioPlayer.stop()
@@ -80,7 +74,7 @@ struct ThreadPlaybackView: View {
 				WaveformChartView(data: data)
 					.frame(width: 250, height: 100)
 					.onReceive(timer, perform: updateData)
-			case false:
+			} else {
 				Button("Play", systemImage: "play.circle") {
 					audioPlayer.play()
 				}
